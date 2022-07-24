@@ -17,25 +17,24 @@
   <meta name="author" content="Night Cruise">
   <meta name="keywords" content="">
   
-    <meta name="description" content="Split-Ordered Lists: Lock-Free Extensible Hash Tables">
+    <meta name="description" content="a strong consistency algorithm">
 <meta property="og:type" content="article">
-<meta property="og:title" content="lock-free hashtable">
-<meta property="og:url" content="https://night-cruise.github.io/2022/05/22/lock-free-hashtable/index.html">
+<meta property="og:title" content="Raft（一）：一致性算法">
+<meta property="og:url" content="https://night-cruise.github.io/2022/07/24/Raft-1/index.html">
 <meta property="og:site_name" content="阿愁">
-<meta property="og:description" content="Split-Ordered Lists: Lock-Free Extensible Hash Tables">
+<meta property="og:description" content="a strong consistency algorithm">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2022-05-22T14:14:06.000Z">
-<meta property="article:modified_time" content="2022-05-23T02:38:06.911Z">
+<meta property="article:published_time" content="2022-07-24T14:15:53.000Z">
+<meta property="article:modified_time" content="2022-07-24T16:12:09.063Z">
 <meta property="article:author" content="Night Cruise">
-<meta property="article:tag" content="rust">
-<meta property="article:tag" content="concurrent">
-<meta property="article:tag" content="parallel">
-<meta property="article:tag" content="lock-free">
+<meta property="article:tag" content="consistency">
+<meta property="article:tag" content="distributed">
+<meta property="article:tag" content="paper">
 <meta name="twitter:card" content="summary_large_image">
   
   
   
-  <title>lock-free hashtable - 阿愁</title>
+  <title>Raft（一）：一致性算法 - 阿愁</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -198,7 +197,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="lock-free hashtable"></span>
+            <span id="subtitle" data-typed-text="Raft（一）：一致性算法"></span>
           
         </div>
 
@@ -209,8 +208,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2022-05-22 22:14" pubdate>
-          2022年5月22日 晚上
+        <time datetime="2022-07-24 22:15" pubdate>
+          2022年7月24日 晚上
         </time>
       </span>
     
@@ -221,7 +220,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          51 字
+          1.3k 字
         
       </span>
     
@@ -232,7 +231,7 @@
         
         
         
-          1 分钟
+          11 分钟
         
       </span>
     
@@ -270,13 +269,31 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">lock-free hashtable</h1>
+            <h1 style="display: none">Raft（一）：一致性算法</h1>
             
             <div class="markdown-body">
               
-              <h2 id="lock-free-linked-list"><a href="#lock-free-linked-list" class="headerlink" title="lock-free linked list"></a>lock-free linked list</h2><p>施工中。。。。</p>
-<h2 id="lock-free-hashtable"><a href="#lock-free-hashtable" class="headerlink" title="lock-free hashtable"></a>lock-free hashtable</h2><p>施工中。。。。</p>
-
+              <h2 id="为什么我们需要分布式系统？"><a href="#为什么我们需要分布式系统？" class="headerlink" title="为什么我们需要分布式系统？"></a>为什么我们需要分布式系统？</h2><p>分布式系统是由一组通过网络进行通信、为了完成共同的任务而协调工作的计算机节点组成的系统。</p>
+<p>事实上分布式系统的复杂程度通常远远超过单机系统，在单机系统中，我们可能会遇到磁盘故障、并发死锁、系统崩溃等问题，而在分布式系统中，除了这些问题外，我们还可能遇到网络延迟、分区、系统状态不一致等千奇百怪的问题。</p>
+<p>但是，分布式系统同样具有一些好处来吸引人们使用它：</p>
+<ul>
+<li><p>分布式系统中存在大量的计算机并行运行，可以获取<strong>更高的性能</strong>。比如大量的计算的CPU、内存、磁盘可以并行运行。</p>
+</li>
+<li><p>分布式系统可以提供<strong>容错</strong>。比如两台计算机运行完全相同的任务，其中一台发生故障，可以切换到另一台。</p>
+</li>
+<li><p>由于物理原因，有些系统天然在<strong>空间上是分布式</strong>的。例如银行转账，假设银行在相距很远的地方分别由两台服务器，如果要在这两台服务器之前进行交易转账，那么就需要一种在两者之间进行协调的方法。</p>
+</li>
+<li><p>实现一些<strong>安全</strong>目标。比如有一些代码不被信任，但是我们需要和它交互，这些代码不会立即表现出恶意或出现bug。我们可以把代码分散在多处运行，这样不被信任的代码在一台计算机运行，我们的代码在自己的计算机上运行，然后再通过一些特定的网络协议通信。这样就把系统分成了多个计算机，可以限制恶意代码的出错域。</p>
+</li>
+</ul>
+<h2 id="通过复制实现容错"><a href="#通过复制实现容错" class="headerlink" title="通过复制实现容错"></a>通过复制实现容错</h2><p>上面提到，人们使用分布式系统的其中一个原因就是容错，而复制是实现容错的一个重要的工具。通过复制，可以让分布式系统中的节点运行相同副本，从在可以在一个节点出现故障的情况下，其他的节点可以继续提供服务。</p>
+<p>有两种方法可以实现复制，一种是状态转移（State Transfer），另一种是复制状态机（Replicated State Machine）。</p>
+<p>假设我们有一个服务的两个副本，一个是 Primary，另一个是 Backup。我们需要让它们保持同步，在实际上互为副本，这样一旦 Primary 出现故障，因为 Backup 的状态与 Primary 一致，就可以接管整个服务。</p>
+<p>状态转移背后的思想是，Primary 将自己完整状态，比如说内存中的内容，拷贝并发送给Backup。Backup 会保存收到的最近一次状态，所以 Backup 会有所有的数据。当 Primary 故障了，Backup 就可以从它所保存的最新状态开始运行。所以，状态转移就是发送 Primary的状态。</p>
+<p>复制状态机基于一个事实：我们想要复制的大部分服务都有一些确定的内部操作，而外部输入是不确定的。如果一台计算机没有外部输入，它只是一个接一个的执行指令，这样运行着相同服务的多个计算机的状态就会保持一致。只有当存在外部输入时，才可能会破坏一致性。例如，一台服务器在某个时间收到了一个网络数据包，导致服务器做一些不同的事情。</p>
+<p>所以，复制状态机不会在不同的副本之间发送状态，相应的，它只会从 Primary 将这些外部输入发送给 Backup。假设有多台计算机，如果它们从相同的状态启动，并且以相同的顺序，在相同的时间，看到了相同的输入，那么它们会一直互为副本，保持一致。</p>
+<p>因此，状态转移传输的是可能是内存状态，而复制状态机会将来自客户端的操作或者其他外部输入，从 Primary 传输到 Backup。</p>
+<h2 id="Raft-是什么？"><a href="#Raft-是什么？" class="headerlink" title="Raft 是什么？"></a>Raft 是什么？</h2>
               
             </div>
             <hr/>
@@ -293,7 +310,7 @@
     
       <span class="category-chain">
         
-  <a href="/categories/concurrent/" class="category-chain-item">concurrent</a>
+  <a href="/categories/distributed-system/" class="category-chain-item">distributed system</a>
   
   
 
@@ -308,13 +325,11 @@
     <div class="post-meta">
       <i class="iconfont icon-tags"></i>
       
-        <a href="/tags/rust/">#rust</a>
+        <a href="/tags/consistency/">#consistency</a>
       
-        <a href="/tags/concurrent/">#concurrent</a>
+        <a href="/tags/distributed/">#distributed</a>
       
-        <a href="/tags/parallel/">#parallel</a>
-      
-        <a href="/tags/lock-free/">#lock-free</a>
+        <a href="/tags/paper/">#paper</a>
       
     </div>
   
@@ -326,8 +341,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>lock-free hashtable</div>
-      <div>https://night-cruise.github.io/2022/05/22/lock-free-hashtable/</div>
+      <div>Raft（一）：一致性算法</div>
+      <div>https://night-cruise.github.io/2022/07/24/Raft-1/</div>
     </div>
     <div class="license-meta">
       
@@ -339,7 +354,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2022年5月22日</div>
+          <div>2022年7月24日</div>
         </div>
       
       
@@ -369,18 +384,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/07/24/Raft-1/" title="Raft（一）：一致性算法">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">Raft（一）：一致性算法</span>
-                        <span class="visible-mobile">上一篇</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/05/22/drop-check/" title="drop check">
-                        <span class="hidden-mobile">drop check</span>
+                      <a href="/2022/05/22/lock-free-hashtable/" title="lock-free hashtable">
+                        <span class="hidden-mobile">lock-free hashtable</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
