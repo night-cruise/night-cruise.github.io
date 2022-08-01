@@ -1,0 +1,793 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta name="google-site-verification" content="NutVL4Scy7H0J8keF3k0QjqlIRLdXafMMiMg6ZhF5CQ" />
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Night Cruise">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="the log replication in raft">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Raft（三）：日志复制">
+<meta property="og:url" content="https://night-cruise.github.io/2022/07/31/Raft-3/index.html">
+<meta property="og:site_name" content="阿愁">
+<meta property="og:description" content="the log replication in raft">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://night-cruise.github.io/2022/07/31/Raft-3/Raft-%E5%9B%BE1.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/07/31/Raft-3/Raft-%E5%9B%BE2.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/07/31/Raft-3/Raft-%E5%9B%BE3.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/07/31/Raft-3/Raft-%E5%9B%BE5.png">
+<meta property="article:published_time" content="2022-07-31T15:05:17.000Z">
+<meta property="article:modified_time" content="2022-08-01T04:22:09.719Z">
+<meta property="article:author" content="Night Cruise">
+<meta property="article:tag" content="consistency">
+<meta property="article:tag" content="distributed">
+<meta property="article:tag" content="paper">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://night-cruise.github.io/2022/07/31/Raft-3/Raft-%E5%9B%BE1.png">
+  
+  
+  
+  <title>Raft（三）：日志复制 - 阿愁</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"night-cruise.github.io","root":"/","version":"1.9.0","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>阿愁</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Raft（三）：日志复制"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-07-31 23:05" pubdate>
+          2022年7月31日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          12k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          98 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Raft（三）：日志复制</h1>
+            
+            <div class="markdown-body">
+              
+              <h2 id="日志复制"><a href="#日志复制" class="headerlink" title="日志复制"></a>日志复制</h2><p>具体的日志复制算法，在 Raft 论文中说的非常详细：<a target="_blank" rel="noopener" href="https://raft.github.io/raft.pdf">Raft paper</a>（第5节、5.3节）。</p>
+<p>在 LAB 2B 的实现中需要施加选举限制：<a target="_blank" rel="noopener" href="https://raft.github.io/raft.pdf">Raft paper</a>（第5.4.1节）。</p>
+<p>需要注意的是，Leader 只能提交当前任期内的日志：<a target="_blank" rel="noopener" href="https://raft.github.io/raft.pdf">Raft paper</a>（第5.4.2节）。</p>
+<h2 id="日志加速回退"><a href="#日志加速回退" class="headerlink" title="日志加速回退"></a>日志加速回退</h2><p>在 <a target="_blank" rel="noopener" href="https://raft.github.io/raft.pdf">Raft paper</a>（第5节）中提到，如果 Leader 向一个 Follower 追加日志失败，就表明 Leader 和 Follower 的日志有冲突，则 Leader 会回退一个 Log，之后再次向跟随者追加日志。</p>
+<p>假设有这样一个场景，我们有5个服务器，有1个 Leader，这个 Leader 和另一个 Follower 困在一个网络分区中。这个 Leader 一直向它唯一的 Follower 发送 AppendEntries，因为没有过半服务器，所以没有一条 Log 会 commit。在另一个有多数服务器的网络分区中，系统会选出新的 Leader 并继续运行。旧的 Leader 和它的 Follower 可能会记录无限多的旧的任期的未 commit 的 Log。当旧的 Leader 和它的 Follower 重新加入到集群中时，这些 Log 需要被删除并覆盖。</p>
+<p>如果 Leader 每次只能在附加日志RPC 失败后回退一个 Log 然后重试的话，可能会耗费大量的时间。因此，需要某些方法来加速日志的回退。</p>
+<p>6.824 的课堂上，Robert 教授给出了一个方法：让 Leader 可以每次回退一整个任期的 Log，而不是只回退一个 Log。</p>
+<p>我们将可能的场景分成3类，在这里假设我们只有一个 Leader(S2)和一个 Follower(S1)，S2 要发送一条任期号为6的 AppendEntries 消息给 S1：</p>
+<p>（1）场景一</p>
+<p>S1没有任期6的 Log，因此我们需要回退一整个任期的 Log。</p>
+<img src="/2022/07/31/Raft-3/Raft-%E5%9B%BE1.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>（2）场景二</p>
+<p>S1 收到了任期4的旧 Leader 的多条 Log，但是作为新 Leader，S2 只收到了一条任期4的 Log。所以这里，我们需要覆盖 S1 中有关旧 Leader 的 Log。</p>
+<img src="/2022/07/31/Raft-3/Raft-%E5%9B%BE2.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>（3）场景三</p>
+<p>S1 与 S2 的 Log 不冲突，但是 S1 缺失了部分 S2 中的Log，这里我们回退掉所有空缺的 Log。</p>
+<img src="/2022/07/31/Raft-3/Raft-%E5%9B%BE3.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>可以让 Follower 在回复 Leader 的 AppendEntries 消息中，携带3个额外的变量，来加速日志的恢复：</p>
+<ul>
+<li><p>XTerm：Follower 与 Leader 冲突的 Log 对应的任期号。如果 Follower 在 PrevLogIndex 位置的任期号与 Leader 不匹配，它会拒绝 Leader 的 AppendEntries 消息，并将自己的任期号放在 XTerm 中。如果 Follower 在对应位置没有 Log，那么这里会返回 -1。</p>
+</li>
+<li><p>XIndex：Folower 中任期号为 XTerm 的第一条 Log 的槽位号。</p>
+</li>
+<li><p>XLen：如果 Follower 在 PrevLogIndex 位置没有 Log，那么 XTerm 会返回-1，XLen 表示空白的 Log 槽位数。</p>
+</li>
+</ul>
+<p>Leader 收到错误返回时，就可以根据上述信息加速日志回退：</p>
+<ul>
+<li><p>场景一：S1 会返回 XTerm&#x3D;5，XIndex&#x3D;2。S2 发现自己没有任期5的日志，它会将 S1 的 nextIndex 设置为 XIndex，也就是S1中，任期5的第一条Log对应的槽位号。</p>
+</li>
+<li><p>场景二：S1 会返回 XTerm&#x3D;4，XIndex&#x3D;1。S2 发现自己有任期4的日志，它会将 S1 的 nextIndex 设置为 XIndex+1。</p>
+</li>
+<li><p>场景三：S1 会返回 XTerm&#x3D;-1，XLen&#x3D;2。这表示 S1 中日志太短了，在冲突的位置没有 Log 条目，Leader 应该回退到 Follower 最后一条 Log 条目的下一条，也就是说 S2 会将 S1 的 nextIndex 设置为 nextIndex-XLen。</p>
+</li>
+</ul>
+<h2 id="LAB-2B-中遇到的问题"><a href="#LAB-2B-中遇到的问题" class="headerlink" title="LAB 2B 中遇到的问题"></a>LAB 2B 中遇到的问题</h2><p>最后说一说，在实现 6.824 的 LAB 2B 的过程中遇到的一些 Bug。</p>
+<h3 id="Bug-1"><a href="#Bug-1" class="headerlink" title="Bug 1"></a>Bug 1</h3><p>在运行 LAB 2B 的测试后，第一个没有通过的是测试 <code>TestRPCBytes2B</code>。错误日志如下所示：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><code class="hljs go">S0 starts running                                                                                                                        <br>                                               S1 starts running                                                                         <br>                                                                                            S2 starts running                            <br>                                                                                            S2 starts election                           <br>                                                                                            S2 becomes Candidate                         <br>                                                                                            S2 change term from <span class="hljs-number">0</span> to <span class="hljs-number">1</span>                   <br>                                                                                            S2 votes <span class="hljs-keyword">for</span> S2                              <br>S0 receives VoteRequestRpc from S2                                                                                                       <br>S0 becomes Follower                                                                                                                      <br>S0 changes term from <span class="hljs-number">1</span> to <span class="hljs-number">1</span>                                                                                                              <br>S0 votes <span class="hljs-keyword">for</span> S2                                                                                                                          <br>                                                                                            S2 becomes Leader                            <br>                                               S1 receives VoteRequestRpc from S2                                                        <br>                                               S1 becomes Follower                                                                       <br>                                               S1 changes term from <span class="hljs-number">1</span> to <span class="hljs-number">1</span>                                                               <br>                                               S1 votes <span class="hljs-keyword">for</span> S2                                                                           <br>                                                                                            S2 sends hearbeat                            <br>                                                                                            S2 becomes Leader                            <br>                                                                                            S2 sends hearbeat                                <br></code></pre></td></tr></table></figure>
+
+<p>在错误日志中，S2 连续两次成为 Leader，导致 S2 中运行了两个 <code>heartbeat ticker</code>，因此 S2 就会发送比正常的 Leader 的两倍字节数，所以无法通过 <code>TestRPCBytes2B</code> 测试。</p>
+<p>根据错误原因，可以定位错误是在请求投票的实现中，代码如下所示：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(rf *Raft)</span></span> startElection() &#123;<br>    <span class="hljs-comment">// 省略。。。。</span><br><br>    receivedVotes := <span class="hljs-number">1</span><br>    <span class="hljs-keyword">for</span> i := <span class="hljs-keyword">range</span> rf.peers &#123;<br>        <span class="hljs-keyword">if</span> i == rf.me &#123;<br>            <span class="hljs-keyword">continue</span><br>        &#125;<br>        <span class="hljs-keyword">go</span> <span class="hljs-function"><span class="hljs-keyword">func</span><span class="hljs-params">(peerId <span class="hljs-type">int</span>)</span></span> &#123;<br>            rf.mu.Lock()<br>            args := &amp;RequestVoteArgs&#123;<br>                Term:         rf.currentTerm,<br>                CandidateId:  rf.me,<br>                LastLogIndex: rf.lastLogIndex,<br>                LastLogTerm:  rf.lastLogTerm,<br>            &#125;<br>            reply := &amp;RequestVoteReply&#123;&#125;<br>            rf.mu.Unlock()<br><br>            <span class="hljs-keyword">if</span> !rf.sendRequestVote(peerId, args, reply) &#123;<br>                <span class="hljs-keyword">return</span><br>            &#125;<br><br>            rf.mu.Lock()<br>            <span class="hljs-keyword">if</span> reply.Term &gt; rf.currentTerm &#123;<br>                rf.convertToFollower(reply.Term)<br>                rf.mu.Unlock()<br>                <span class="hljs-keyword">return</span><br>            &#125;<br>            <span class="hljs-keyword">if</span> !reply.VoteGranted &#123;<br>                rf.mu.Unlock()<br>                <span class="hljs-keyword">return</span><br>            &#125;<br>            receivedVotes++<br>            <span class="hljs-keyword">if</span> receivedVotes*<span class="hljs-number">2</span> &gt; <span class="hljs-built_in">len</span>(rf.peers) &#123;<br>                rf.convertToLeader()<br>            &#125;<br>            rf.mu.Unlock()<br>        &#125;(i)<br>    &#125;<br><br>    <span class="hljs-comment">// 省略。。。。</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>我们 Go 程中锁的使用分成两部分，第一部分：第10行（上锁）——第23行（解锁），第二部分：第29行（上锁）——第43行（解锁）。</p>
+<p>假设所有的 Go 程都执行完第一部分后，再执行第二部分。这样所有的 Go 程都能发送请求投票RPC，因为此时当前的节点一定是跟随者。这样，当执行第二部分时，在得到的投票数达到半数服务器数量后，每多收到一票，就会调用 <code>rf.convertToLeader()</code> 转化为跟随者，从而导致上述的错误。</p>
+<p>解决方法很简单，只需要在第二部分的开头增加一个对当前节点是否还是候选者的判断即可：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(rf *Raft)</span></span> startElection() &#123;<br>    <span class="hljs-comment">// 省略。。。。</span><br><br>    receivedVotes := <span class="hljs-number">1</span><br>    <span class="hljs-keyword">for</span> i := <span class="hljs-keyword">range</span> rf.peers &#123;<br>        <span class="hljs-keyword">if</span> i == rf.me &#123;<br>            <span class="hljs-keyword">continue</span><br>        &#125;<br>        <span class="hljs-keyword">go</span> <span class="hljs-function"><span class="hljs-keyword">func</span><span class="hljs-params">(peerId <span class="hljs-type">int</span>)</span></span> &#123;<br>            rf.mu.Lock()<br>            args := &amp;RequestVoteArgs&#123;<br>                Term:         rf.currentTerm,<br>                CandidateId:  rf.me,<br>                LastLogIndex: rf.lastLogIndex,<br>                LastLogTerm:  rf.lastLogTerm,<br>            &#125;<br>            reply := &amp;RequestVoteReply&#123;&#125;<br>            rf.mu.Unlock()<br><br>            <span class="hljs-keyword">if</span> !rf.sendRequestVote(peerId, args, reply) &#123;<br>                <span class="hljs-keyword">return</span><br>            &#125;<br><br>            rf.mu.Lock()<br>            <span class="hljs-comment">// 已经不是候选者了，直接返回</span><br>            <span class="hljs-keyword">if</span> rf.role != CANDIDATE &#123;<br>                rf.mu.Unlock()<br>                <span class="hljs-keyword">return</span><br>            &#125;<br>            <span class="hljs-keyword">if</span> reply.Term &gt; rf.currentTerm &#123;<br>                rf.convertToFollower(reply.Term)<br>                rf.mu.Unlock()<br>                <span class="hljs-keyword">return</span><br>            &#125;<br>            <span class="hljs-keyword">if</span> !reply.VoteGranted &#123;<br>                rf.mu.Unlock()<br>                <span class="hljs-keyword">return</span><br>            &#125;<br>            receivedVotes++<br>            <span class="hljs-keyword">if</span> receivedVotes*<span class="hljs-number">2</span> &gt; <span class="hljs-built_in">len</span>(rf.peers) &#123;<br>                rf.convertToLeader()<br>            &#125;<br>            rf.mu.Unlock()<br>        &#125;(i)<br>    &#125;<br><br>    <span class="hljs-comment">// 省略。。。。</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h3 id="Bug-2"><a href="#Bug-2" class="headerlink" title="Bug 2"></a>Bug 2</h3><p>遇到的第二个 Bug 是由于使用负数索引导致的运行时崩溃，报错如下所示：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs go">Test (<span class="hljs-number">2</span>A): initial election ...<br>  ... Passed --   <span class="hljs-number">3.1</span>  <span class="hljs-number">3</span>   <span class="hljs-number">56</span>   <span class="hljs-number">16914</span>    <span class="hljs-number">0</span><br>Test (<span class="hljs-number">2</span>A): election after network failure ...<br><span class="hljs-number">2022</span>/<span class="hljs-number">07</span>/<span class="hljs-number">30</span> <span class="hljs-number">18</span>:<span class="hljs-number">00</span>:<span class="hljs-number">11</span> <span class="hljs-number">0</span> <span class="hljs-number">1</span> <span class="hljs-number">2</span> <span class="hljs-number">0</span> <span class="hljs-number">0</span> <span class="hljs-number">0</span><br><span class="hljs-built_in">panic</span>: runtime <span class="hljs-type">error</span>: index out of <span class="hljs-keyword">range</span> [<span class="hljs-number">-1</span>]<br><br>goroutine <span class="hljs-number">230</span> [running]:<br><span class="hljs-number">6.824</span>/raft.(*Raft).sendHearbeat.func1(<span class="hljs-number">0xc0000c81e0</span>, <span class="hljs-number">0x1</span>)<br>    /mnt/d/code/projects/distributed-system/<span class="hljs-number">6.824</span>/src/raft/raft.<span class="hljs-keyword">go</span>:<span class="hljs-number">613</span> +<span class="hljs-number">0x66f</span><br>created by <span class="hljs-number">6.824</span>/raft.(*Raft).sendHearbeat<br>    /mnt/d/code/projects/distributed-system/<span class="hljs-number">6.824</span>/src/raft/raft.<span class="hljs-keyword">go</span>:<span class="hljs-number">571</span> +<span class="hljs-number">0x64</span><br>exit status <span class="hljs-number">2</span><br>FAIL    <span class="hljs-number">6.824</span>/raft    <span class="hljs-number">3.157</span>s<br></code></pre></td></tr></table></figure>
+
+<p>索引越界具体发生在代码的613行：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">if</span> reply.XTerm == rf.log[reply.XIndex<span class="hljs-number">-1</span>].Term<br></code></pre></td></tr></table></figure>
+
+<p>通过日志可以知道，发生错误时心跳 RPC 得到的返回消息是：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs go">Reply &#123;<br>    Term: <span class="hljs-number">0</span><br>    Success: <span class="hljs-literal">false</span><br>    XTerm: <span class="hljs-number">0</span><br>    XIndex: <span class="hljs-number">0</span><br>    XLen: <span class="hljs-number">0</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>根据 Term&#x3D;0 和 Success&#x3D;false 可以看出跟随者似乎没有执行任何对心跳消息的处理就直接返回了。可以推断出，跟随者应该是已经”死掉“了，因此才没有执行对心跳消息的处理。</p>
+<p>解决方法是，在发送心跳的函数中增加对跟随者节点状态的判断，代码如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">if</span> reply.Term &lt; rf.currentTerm &#123;<br>    rf.mu.Unlock()<br>    <span class="hljs-keyword">return</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>只要 <code>reply.Term</code> 小于 Leader 的任期号，就可以知道跟随者没有对 Leader 发送的心跳进行处理，那么跟随者自然就已经”死掉了“。</p>
+<h3 id="Bug-3"><a href="#Bug-3" class="headerlink" title="Bug 3"></a>Bug 3</h3><p>第三个遇到的问题是 <code>TestRejoin2B</code> 测试失败，失败的日志如下所示：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><code class="hljs go">S0 sends hearbeat                                                                                                                                                           <br>S0 sends hearbeat to <span class="hljs-number">2</span>: &amp;&#123;Term:<span class="hljs-number">3</span>                                                                                                                                            <br>LeaderId:<span class="hljs-number">0</span> PrevLogIndex:<span class="hljs-number">3</span>                                                                                                                                                   <br>PrevLogTerm:<span class="hljs-number">3</span> Entries:[]                                                                                                                                                    <br>LeaderCommit:<span class="hljs-number">3</span>&#125;                                                                                                                                                             <br>S0 sends hearbeat to <span class="hljs-number">1</span>: &amp;&#123;Term:<span class="hljs-number">3</span>                                                                                                                                            <br>LeaderId:<span class="hljs-number">0</span> PrevLogIndex:<span class="hljs-number">2</span>                                                                                                                                                   <br>PrevLogTerm:<span class="hljs-number">2</span> Entries:[&#123;Command:<span class="hljs-number">104</span>                                                                                                                                         <br>Term:<span class="hljs-number">3</span> CommandIndex:<span class="hljs-number">3</span>&#125;]                                                                                                                                                     <br>LeaderCommit:<span class="hljs-number">3</span>&#125;                                                                                                                                                             <br>                                                                      S2 receives AppendEntriesRpc from                                                                     <br>                                                                      S0                                                                                                    <br>                                                                      S2 appends logs: []                                                                                   <br>                                                                      S2 changes commitIndex from <span class="hljs-number">2</span> to                                                                      <br>                                                                      <span class="hljs-number">3</span>                                                                                                     <br>                                                                      S2 reply AppendEntriesRpc from                                                                        <br>                                                                      S0: &amp;&#123;Term:<span class="hljs-number">3</span> Success:<span class="hljs-literal">true</span> XTerm:<span class="hljs-number">0</span>                                                                     <br>                                                                      XIndex:<span class="hljs-number">0</span> XLen:<span class="hljs-number">0</span>&#125;                                                                                      <br>                                                                      S2 applies msg&#123;Command:                                                                               <br>                                                                      %!s(<span class="hljs-type">int</span>=<span class="hljs-number">104</span>), Index: <span class="hljs-number">3</span>&#125;                                                                               <br>                                                                      S2 change lastApplied from <span class="hljs-number">2</span> to <span class="hljs-number">3</span>                                                                     <br>                                    S1 appends a log: &#123;Command:<span class="hljs-number">105</span>                                                                                                          <br>                                    Term:<span class="hljs-number">2</span> CommandIndex:<span class="hljs-number">3</span>&#125;                                                                                                                  <br>                                    S1 sends hearbeat                                                                                                                       <br>                                    S1 sends hearbeat to <span class="hljs-number">2</span>: &amp;&#123;Term:<span class="hljs-number">2</span>                                                                                                        <br>                                    LeaderId:<span class="hljs-number">1</span> PrevLogIndex:<span class="hljs-number">1</span>                                                                                                               <br>                                    PrevLogTerm:<span class="hljs-number">1</span>                                                                                                                           <br>                                    Entries:[&#123;Command:<span class="hljs-number">103</span> Term:<span class="hljs-number">2</span>                                                                                                            <br>                                    CommandIndex:<span class="hljs-number">2</span>&#125; &#123;Command:<span class="hljs-number">105</span>                                                                                                            <br>                                    Term:<span class="hljs-number">2</span> CommandIndex:<span class="hljs-number">3</span>&#125;]                                                                                                                 <br>                                    LeaderCommit:<span class="hljs-number">2</span>&#125;                                                                                                                         <br>                                                                      S2 receives AppendEntriesRpc from                                                                     <br>                                                                      S1                                                                                                    <br>                                                                      S2 reply AppendEntriesRpc from                                                                        <br>                                                                      S1: &amp;Reply&#123;Term: <span class="hljs-number">3</span>, Success:                                                                          <br>                                                                      <span class="hljs-literal">false</span>&#125;                                                                                                <br>                                    S1 becomes Follower                                                                                                                     <br>                                    S1 changes term from <span class="hljs-number">3</span> to <span class="hljs-number">3</span>                                                                                                             <br>                                    S1 sends hearbeat to <span class="hljs-number">0</span>: &amp;&#123;Term:<span class="hljs-number">3</span>                                                                                                        <br>                                    LeaderId:<span class="hljs-number">1</span> PrevLogIndex:<span class="hljs-number">2</span>                                                                                                               <br>                                    PrevLogTerm:<span class="hljs-number">2</span>                                                                                                                           <br>                                    Entries:[&#123;Command:<span class="hljs-number">105</span> Term:<span class="hljs-number">2</span>                                                                                                            <br>                                    CommandIndex:<span class="hljs-number">3</span>&#125;] LeaderCommit:<span class="hljs-number">2</span>&#125;                                                                                                        <br>S0 receives AppendEntriesRpc from                                                                                                                                           <br>S1                                                                                                                                                                          <br>S0 becomes Follower                                                                                                                                                         <br>S0 appends logs: [&#123;Command:<span class="hljs-number">105</span>                                                                                                                                              <br>Term:<span class="hljs-number">2</span> CommandIndex:<span class="hljs-number">3</span>&#125;]                                                                                                                                                     <br>S0 reply AppendEntriesRpc from S1:                                                                                                                                          <br>&amp;&#123;Term:<span class="hljs-number">3</span> Success:<span class="hljs-literal">true</span> XTerm:<span class="hljs-number">0</span>                                                                                                                                               <br>XIndex:<span class="hljs-number">0</span> XLen:<span class="hljs-number">0</span>&#125;                  <br></code></pre></td></tr></table></figure>
+
+<p>在上面的日志中，S0 是 Leader 并且和 S2 可以正常通信，S1 被困在一个单独的网络分区中，并且自认为自己是 Leader。</p>
+<p>当 S1 恢复正常后，S1 向 S2 发送 AppendEntries，然后收到了拒绝回复，并根据回复中的任期号重置自己的任期号，将自己转化为跟随者。到这里一切都还正常，但是接着 S1 继续向 S0 发送了 AppendEntries，导致 S0 退化成了跟随者，并且被追加了一条来自跟随者的日志，从而导致错误。</p>
+<p>错误原因很明显，S1 在发送 AppendEntries 之前没有判断自己是否还是 Leader，因此在 S1 转变为跟随者之后，S1 仍然向 S0 发送了RPC消息。</p>
+<p>那么，只需要在发送 AppendEntries 之前加一个小的条件判断即可：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-comment">// 已经不是领导人了，直接返回</span><br><span class="hljs-keyword">if</span> rf.role != LEADER &#123;<br>    rf.mu.Unlock()<br>    <span class="hljs-keyword">return</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h3 id="Bug-4"><a href="#Bug-4" class="headerlink" title="Bug 4"></a>Bug 4</h3><p>最后遇到的 Bug 是没有通过 <code>TestFailNoAgree2B</code> 测试，关于这个测试得到了两个主要的错误日志。</p>
+<p>第一个错误日志：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br></pre></td><td class="code"><pre><code class="hljs go">S0 starts running                                                                                                                                                           <br>                                    S1 starts running                                                                                                                       <br>                                                                      S2 starts running                                                                                     <br>                                                                                                        S3 starts running                                                   <br>                                                                                                                                          S4 starts running                 <br>S0 starts election                                                                                                                                                          <br>S0 becomes Candidate                                                                                                                                                        <br>S0 change term from <span class="hljs-number">0</span> to <span class="hljs-number">1</span>                                                                                                                                                  <br>S0 votes <span class="hljs-keyword">for</span> S0                                                                                                                                                             <br>                                    S1 receives VoteRequestRpc from                                                                                                         <br>                                    S0                                                                                                                                      <br>                                    S1 changes term from <span class="hljs-number">0</span> to <span class="hljs-number">1</span>                                                                                                             <br>                                    S1 votes <span class="hljs-keyword">for</span> S0                                                                                                                         <br>                                                                      S2 receives VoteRequestRpc from                                                                       <br>                                                                      S0                                                                                                    <br>                                                                      S2 changes term from <span class="hljs-number">0</span> to <span class="hljs-number">1</span>                                                                           <br>                                                                      S2 votes <span class="hljs-keyword">for</span> S0                                                                                       <br>S0 becomes Leader                                                                                                                                                           <br>S0 sends hearbeat                                                                                                                                                           <br>S0 sends hearbeat to S4: &amp;&#123;Term:<span class="hljs-number">1</span>                                                                                                                                           <br>LeaderId:<span class="hljs-number">0</span> PrevLogIndex:<span class="hljs-number">0</span>                                                                                                                                                   <br>PrevLogTerm:<span class="hljs-number">0</span> Entries:[]                                                                                                                                                    <br>LeaderCommit:<span class="hljs-number">0</span>&#125;                                                                                                                                                             <br>                                                                                                                                          S4 receives AppendEntriesRpc from <br>                                                                                                                                          S0                                <br>                                                                                                                                          S4 changes term from <span class="hljs-number">0</span> to <span class="hljs-number">1</span>       <br>                                                                                                                                          S4 appends logs: []               <br>                                                                                                                                          S4 reply AppendEntriesRpc from S0:<br>                                                                                                                                          &amp;&#123;Term:<span class="hljs-number">1</span> Success:<span class="hljs-literal">true</span> XTerm:<span class="hljs-number">0</span>     <br>                                                                                                                                          XIndex:<span class="hljs-number">0</span> XLen:<span class="hljs-number">0</span>&#125;                  <br>S0 sends hearbeat to S1: &amp;&#123;Term:<span class="hljs-number">1</span>                                                                                                                                           <br>LeaderId:<span class="hljs-number">0</span> PrevLogIndex:<span class="hljs-number">0</span>                                                                                                                                                   <br>PrevLogTerm:<span class="hljs-number">0</span> Entries:[]                                                                                                                                                    <br>LeaderCommit:<span class="hljs-number">0</span>&#125;                                                                                                                                                             <br>                                    S1 receives AppendEntriesRpc from                                                                                                       <br>                                    S0                                                                                                                                      <br>                                    S1 appends logs: []                                                                                                                     <br>                                    S1 reply AppendEntriesRpc from                                                                                                          <br>                                    S0: &amp;&#123;Term:<span class="hljs-number">1</span> Success:<span class="hljs-literal">true</span> XTerm:<span class="hljs-number">0</span>                                                                                                       <br>                                    XIndex:<span class="hljs-number">0</span> XLen:<span class="hljs-number">0</span>&#125;                                                                                                                        <br>S0 sends hearbeat to S3: &amp;&#123;Term:<span class="hljs-number">1</span>                                                                                                                                           <br>LeaderId:<span class="hljs-number">0</span> PrevLogIndex:<span class="hljs-number">0</span>                                                                                                                                                   <br>PrevLogTerm:<span class="hljs-number">0</span> Entries:[]                                                                                                                                                    <br>LeaderCommit:<span class="hljs-number">0</span>&#125;                                                                                                                                                             <br>                                                                                                        S3 starts election                                                  <br>                                                                                                        S3 becomes Candidate                                                <br>                                                                                                        S3 change term from <span class="hljs-number">0</span> to <span class="hljs-number">1</span>                                          <br>                                                                                                        S3 votes <span class="hljs-keyword">for</span> S3                                                     <br>S0 appends a log: &#123;Command:<span class="hljs-number">10</span>                                                                                                                                               <br>Term:<span class="hljs-number">1</span> CommandIndex:<span class="hljs-number">1</span>&#125;                                                                                                                                                      <br>S0 sends hearbeat                                                                                                                                                           <br>S0 sends hearbeat to S4: &amp;&#123;Term:<span class="hljs-number">1</span>                                                                                                                                           <br>LeaderId:<span class="hljs-number">0</span> PrevLogIndex:<span class="hljs-number">0</span>                                                                                                                                                   <br>PrevLogTerm:<span class="hljs-number">0</span> Entries:[&#123;Command:<span class="hljs-number">10</span>                                                                                                                                          <br>Term:<span class="hljs-number">1</span> CommandIndex:<span class="hljs-number">1</span>&#125;]                                                                                                                                                     <br>LeaderCommit:<span class="hljs-number">0</span>&#125;                                                                                                                                                             <br>                                                                                                                                          S4 receives AppendEntriesRpc from <br>                                                                                                                                          S0                                <br>                                                                                                                                          S4 appends logs: [&#123;Command:<span class="hljs-number">10</span>     <br>                                                                                                                                          Term:<span class="hljs-number">1</span> CommandIndex:<span class="hljs-number">1</span>&#125;]           <br>                                                                                                                                          S4 reply AppendEntriesRpc from S0:<br>                                                                                                                                          &amp;&#123;Term:<span class="hljs-number">1</span> Success:<span class="hljs-literal">true</span> XTerm:<span class="hljs-number">0</span>     <br>                                                                                                                                          XIndex:<span class="hljs-number">0</span> XLen:<span class="hljs-number">0</span>&#125;                  <br>S0 sends hearbeat to S2: &amp;&#123;Term:<span class="hljs-number">1</span>                                                                                                                                           <br>LeaderId:<span class="hljs-number">0</span> PrevLogIndex:<span class="hljs-number">0</span>                                                                                                                                                   <br>PrevLogTerm:<span class="hljs-number">0</span> Entries:[]                                                                                                                                                    <br>LeaderCommit:<span class="hljs-number">0</span>&#125;                                                                                                                                                             <br>                                                                      S2 receives AppendEntriesRpc from                                                                     <br>                                                                      S0                                                                                                    <br>                                                                      S2 appends logs: []                                                                                   <br>                                                                      S2 reply AppendEntriesRpc from                                                                        <br>                                                                      S0: &amp;&#123;Term:<span class="hljs-number">1</span> Success:<span class="hljs-literal">true</span> XTerm:<span class="hljs-number">0</span>                                                                     <br>                                                                      XIndex:<span class="hljs-number">0</span> XLen:<span class="hljs-number">0</span>&#125;                                                                                      <br>S0 receives VoteRequestRpc from S3                                                                                                                                          <br>                                    S1 receives VoteRequestRpc from                                                                                                         <br>                                    S3                                                                                                                                      <br>                                                                      S2 receives VoteRequestRpc from                                                                       <br>                                                                      S3                                                                                                    <br>                                                                                                                                          S4 receives VoteRequestRpc from S3<br>S0 sends hearbeat to S1: &amp;&#123;Term:<span class="hljs-number">1</span>                                                                                                                                           <br>LeaderId:<span class="hljs-number">0</span> PrevLogIndex:<span class="hljs-number">0</span>                                                                                                                                                   <br>PrevLogTerm:<span class="hljs-number">0</span> Entries:[&#123;Command:<span class="hljs-number">10</span>                                                                                                                                          <br>Term:<span class="hljs-number">1</span> CommandIndex:<span class="hljs-number">1</span>&#125;]                                                                                                                                                     <br>LeaderCommit:<span class="hljs-number">0</span>&#125;                                                                                                                                                             <br>                                    S1 receives AppendEntriesRpc from                                                                                                       <br>                                    S0                                                                                                                                      <br>                                    S1 appends logs: [&#123;Command:<span class="hljs-number">10</span>                                                                                                           <br>                                    Term:<span class="hljs-number">1</span> CommandIndex:<span class="hljs-number">1</span>&#125;]                                                                                                                 <br>                                    S1 reply AppendEntriesRpc from                                                                                                          <br>                                    S0: &amp;&#123;Term:<span class="hljs-number">1</span> Success:<span class="hljs-literal">true</span> XTerm:<span class="hljs-number">0</span>                                                                                                       <br>                                    XIndex:<span class="hljs-number">0</span> XLen:<span class="hljs-number">0</span>&#125;                                                                                                                        <br>S0 changes commitIndex from <span class="hljs-number">0</span> to <span class="hljs-number">1</span>                                                                                                                                          <br>S0 sends hearbeat to S2: &amp;&#123;Term:<span class="hljs-number">1</span>                                                                                                                                           <br>LeaderId:<span class="hljs-number">0</span> PrevLogIndex:<span class="hljs-number">0</span>                                                                                                                                                   <br>PrevLogTerm:<span class="hljs-number">0</span> Entries:[&#123;Command:<span class="hljs-number">10</span>                                                                                                                                          <br>Term:<span class="hljs-number">1</span> CommandIndex:<span class="hljs-number">1</span>&#125;]                                                                                                                                                     <br>LeaderCommit:<span class="hljs-number">1</span>&#125;                                                                                                                                                             <br>                                                                      S2 receives AppendEntriesRpc from                                                                     <br>                                                                      S0                                                                                                    <br>                                                                      S2 appends logs: [&#123;Command:<span class="hljs-number">10</span>                                                                         <br>                                                                      Term:<span class="hljs-number">1</span> CommandIndex:<span class="hljs-number">1</span>&#125;]                                                                               <br>                                                                      S2 changes commitIndex from <span class="hljs-number">0</span> to                                                                      <br>                                                                      <span class="hljs-number">1</span>                                                                                                     <br>                                                                      S2 reply AppendEntriesRpc from                                                                        <br>                                                                      S0: &amp;&#123;Term:<span class="hljs-number">1</span> Success:<span class="hljs-literal">true</span> XTerm:<span class="hljs-number">0</span>                                                                     <br>                                                                      XIndex:<span class="hljs-number">0</span> XLen:<span class="hljs-number">0</span>&#125;                                                                                      <br>S0 sends hearbeat to S3: &amp;&#123;Term:<span class="hljs-number">1</span>                                                                                                                                           <br>LeaderId:<span class="hljs-number">0</span> PrevLogIndex:<span class="hljs-number">0</span>                                                                                                                                                   <br>PrevLogTerm:<span class="hljs-number">0</span> Entries:[&#123;Command:<span class="hljs-number">10</span>                                                                                                                                          <br>Term:<span class="hljs-number">1</span> CommandIndex:<span class="hljs-number">1</span>&#125;]                                                                                                                                                     <br>LeaderCommit:<span class="hljs-number">1</span>&#125;                                                                                                                                                             <br>                                                                                                        S3 receives AppendEntriesRpc from                                   <br>                                                                                                        S0                                                                  <br>                                                                                                        S3 becomes Follower                                                 <br>                                                                                                        S3 appends logs: [&#123;Command:<span class="hljs-number">10</span>                                       <br>                                                                                                        Term:<span class="hljs-number">1</span> CommandIndex:<span class="hljs-number">1</span>&#125;]                                             <br>                                                                                                        S3 changes commitIndex from <span class="hljs-number">0</span> to                                    <br>                                                                                                        <span class="hljs-number">1</span>                                                                   <br>                                                                                                        S3 reply AppendEntriesRpc from                                      <br>                                                                                                        S0: &amp;&#123;Term:<span class="hljs-number">1</span> Success:<span class="hljs-literal">true</span> XTerm:<span class="hljs-number">0</span>                                   <br>                                                                                                        XIndex:<span class="hljs-number">0</span> XLen:<span class="hljs-number">0</span>&#125;                                                    <br>                                                                                                        S3 receives AppendEntriesRpc from                                   <br>                                                                                                        S0                                                                  <br>                                                                                                        S3 appends logs: []                                                 <br>                                                                                                        S3 reply AppendEntriesRpc from                                      <br>                                                                                                        S0: &amp;&#123;Term:<span class="hljs-number">1</span> Success:<span class="hljs-literal">true</span> XTerm:<span class="hljs-number">0</span>                                   <br>                                                                                                        XIndex:<span class="hljs-number">0</span> XLen:<span class="hljs-number">0</span>&#125;                                                    <br>                                                                      S2 applies msg&#123;Command:                                                                               <br>                                                                      %!s(<span class="hljs-type">int</span>=<span class="hljs-number">10</span>), Index: <span class="hljs-number">1</span>&#125;                                                                                <br>                                                                      S2 change lastApplied from <span class="hljs-number">0</span> to <span class="hljs-number">1</span>                                                                     <br>S0 applies msg&#123;Command:                                                                                                                                                     <br>%!s(<span class="hljs-type">int</span>=<span class="hljs-number">10</span>), Index: <span class="hljs-number">1</span>&#125;                                                                                                                                                      <br>S0 change lastApplied from <span class="hljs-number">0</span> to <span class="hljs-number">1</span>                                                                                                                                           <br><br><br><br><span class="hljs-number">6.824</span>/raft.(*Raft).applyMsgToStateMachine(<span class="hljs-number">0xc0000e02d0</span>)<br><br>FAIL    <span class="hljs-number">6.824</span>/raft      <span class="hljs-number">0.767</span>s<br></code></pre></td></tr></table></figure>
+
+<p>在这个场景中，S0 收到了 S1 和 S2 的投票，在第20行成为了 Leader。之后 S0 在43行发送附加日志给 S3，附加日志的请求内容为：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs go">S0 sends hearbeat to S1: &amp;&#123;Term:<span class="hljs-number">1</span> LeaderId:<span class="hljs-number">0</span> PrevLogIndex:<span class="hljs-number">0</span> <br>PrevLogTerm:<span class="hljs-number">0</span> Entries:[] LeaderCommit:<span class="hljs-number">0</span>&#125; <br></code></pre></td></tr></table></figure>
+
+<p>之后，S0在51行收到了客户端的请求，并添加了一条日志：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs go">S0 appends a log: &#123;Command:<span class="hljs-number">10</span> Term:<span class="hljs-number">1</span> CommandIndex:<span class="hljs-number">1</span>&#125;    <br></code></pre></td></tr></table></figure>
+
+<p>接着，S0 在第109行将追加的日志发送给 S3：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs go">S0 sends hearbeat to S3: &amp;&#123;<br>    Term:<span class="hljs-number">1</span> LeaderId:<span class="hljs-number">0</span> PrevLogIndex:<span class="hljs-number">0</span>                                                                                                                                                   <br>    PrevLogTerm:<span class="hljs-number">0</span> Entries:[&#123;Command:<span class="hljs-number">10</span> Term:<span class="hljs-number">1</span> CommandIndex:<span class="hljs-number">1</span>&#125;]                                                                                                                                                     <br>    LeaderCommit:<span class="hljs-number">1</span>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>但是 S3 在第118行首先收到了第二条附加日志RPC：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs go">S3 receives AppendEntriesRpc from S0                                                                  <br>S3 becomes Follower                                                 <br>S3 appends logs: [&#123;Command:<span class="hljs-number">10</span> Term:<span class="hljs-number">1</span> CommandIndex:<span class="hljs-number">1</span>&#125;]                                             <br>S3 changes commitIndex from <span class="hljs-number">0</span> to <span class="hljs-number">1</span> <br></code></pre></td></tr></table></figure>
+
+<p>S3 在125行才收到第一条附加日志RPC：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs go">S3 receives AppendEntriesRpc from S0                                                                                                       <br>S3 appends logs: []<br></code></pre></td></tr></table></figure>
+
+<p>由于RPC请求的乱序到达，S3 首先会收到第二条附加日志RPC，它会追加一条日志。之后才会收到一条附加日志RPC，这这个RPC的 Entries 是空的，这回导致 S3 覆盖掉之前追加的日志。</p>
+<p>但是 S3 此时已经将 CommitIndex 修改为1，之后 S3 会应用 ComminIndex 位置的日志到状态机中，但是对应位置的日志是空的，这就导致了错误。</p>
+<p>很明显，在收到第一条附加日志RPC后，我们不能覆盖掉之前的追加的日志，因此在追加日志的实现中应该加一些判断：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs go">logIndex, entriesIndex := args.PrevLogIndex+<span class="hljs-number">1</span>, <span class="hljs-number">0</span><br><span class="hljs-keyword">for</span> logIndex &lt;= rf.lastLogIndex &amp;&amp; entriesIndex &lt; <span class="hljs-built_in">len</span>(args.Entries) &amp;&amp; rf.log[logIndex<span class="hljs-number">-1</span>] == args.Entries[entriesIndex] &#123;<br>	logIndex++<br>	entriesIndex++<br>&#125;<br><span class="hljs-keyword">if</span> !(entriesIndex == <span class="hljs-built_in">len</span>(args.Entries) &amp;&amp; logIndex &lt;= rf.lastLogIndex &amp;&amp; rf.log[logIndex<span class="hljs-number">-1</span>].Term == args.Term) &#123;<br>	rf.log = <span class="hljs-built_in">append</span>(rf.log[:logIndex<span class="hljs-number">-1</span>], args.Entries[entriesIndex:]...)<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>首先，我们扫描发送过来的日志和本地的日志，找到第一条不匹配的日志的位置X。在之前的实现中，没有第6行的判断，直接执行第7行的追加日志操作，这可能导致已有的日志被覆盖。</p>
+<p>如果剩下的需要追加的日志为空，并且X对应的位置存在日志，如果X对应的日志的任期与当前的 Leader 的任期号相等，说明X对应的日志是当前Leader发送过来的，那么就不应该覆盖掉它。</p>
+<p>除了上述情况，都可以直接执行 <code>rf.log = append(rf.log[:logIndex-1], args.Entries[entriesIndex:]...)</code> 把剩下的日志复制过去。</p>
+<p>在解决完所有 Bug 后并发跑500次测试，全部顺利通过：</p>
+<img src="/2022/07/31/Raft-3/Raft-%E5%9B%BE5.png" srcset="/img/loading.gif" lazyload class="">
+
+
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><p><a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.824/">MIT 6.824</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://raft.github.io/raft.pdf">Raft paper</a></p>
+</li>
+</ul>
+
+              
+            </div>
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/distributed-system/" class="category-chain-item">distributed system</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/consistency/">#consistency</a>
+      
+        <a href="/tags/distributed/">#distributed</a>
+      
+        <a href="/tags/paper/">#paper</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Raft（三）：日志复制</div>
+      <div>https://night-cruise.github.io/2022/07/31/Raft-3/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Night Cruise</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年7月31日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/07/25/Raft-2/" title="Raft（二）：Leader选举">
+                        <span class="hidden-mobile">Raft（二）：Leader选举</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.0/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
