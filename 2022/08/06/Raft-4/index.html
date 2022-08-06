@@ -1,0 +1,752 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta name="google-site-verification" content="NutVL4Scy7H0J8keF3k0QjqlIRLdXafMMiMg6ZhF5CQ" />
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Night Cruise">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="the persistence in raft">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Raft（四）：持久化存储">
+<meta property="og:url" content="https://night-cruise.github.io/2022/08/06/Raft-4/index.html">
+<meta property="og:site_name" content="阿愁">
+<meta property="og:description" content="the persistence in raft">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://night-cruise.github.io/2022/08/06/Raft-4/Raft-%E5%9B%BE1.png">
+<meta property="article:published_time" content="2022-08-06T03:31:56.000Z">
+<meta property="article:modified_time" content="2022-08-06T10:56:36.776Z">
+<meta property="article:author" content="Night Cruise">
+<meta property="article:tag" content="consistency">
+<meta property="article:tag" content="distributed">
+<meta property="article:tag" content="paper">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://night-cruise.github.io/2022/08/06/Raft-4/Raft-%E5%9B%BE1.png">
+  
+  
+  
+  <title>Raft（四）：持久化存储 - 阿愁</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"night-cruise.github.io","root":"/","version":"1.9.0","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>阿愁</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Raft（四）：持久化存储"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-08-06 11:31" pubdate>
+          2022年8月6日 中午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          7.3k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          61 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Raft（四）：持久化存储</h1>
+            
+            <div class="markdown-body">
+              
+              <h2 id="Raft-持久化"><a href="#Raft-持久化" class="headerlink" title="Raft 持久化"></a>Raft 持久化</h2><p>Raft 中所有服务器需要持久化存储的状态：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>currentTerm</td>
+<td>服务器已知最新的任期（在服务器首次启动时初始化为0，单调递增）</td>
+</tr>
+<tr>
+<td>votedFor</td>
+<td>当前任期内收到选票的 candidateId，如果没有投给任何候选人则为空</td>
+</tr>
+<tr>
+<td>log[]</td>
+<td>日志条目；每个条目包含了用于状态机的命令，以及领导人接收到该条目时的任期（初始索引为1）</td>
+</tr>
+</tbody></table>
+<p>当服务器改变了被标记为持久化的某个数据时，服务器应该将更新写入到磁盘或其他持久化存储中。这样当服务器故障重启后，就可以从持久化存储中找到相应的数据并将其加载到内存中，恢复之前的状态。</p>
+<h3 id="currentTerm-持久化"><a href="#currentTerm-持久化" class="headerlink" title="currentTerm 持久化"></a>currentTerm 持久化</h3><p>currentTerm 需要被持久化存储是为了确保选举安全特性，即一个任期内最多只有一个 Leader 会被选举出来。</p>
+<p>假设一共有三台服务器A、B、C。A是Leader，A有三条日志，其任期号分别为5、6、7；B有一条日志，任期号为5；C有一条日志，任期号为5。</p>
+<p>这时，A还没复制日志给B、C，然后A、B、C都崩溃了。之后B、C重启，B、C需要选举出一个Leader，但是由于没有持久化 currentTerm，因此B、C不知道当前的任期号是多少，一种可能的方法是B、C通过查看自己的最后一条日志发现任期号为5，于是就会递增任期号并在任期6中选出一个Leader。</p>
+<p>但是6是一个旧的任期号，在之前的这个任期中已经选举出了一个Leader了，这样一个任期中就选出了两个Leader，因此违反了选举安全特性。</p>
+<h3 id="votedFor-持久化"><a href="#votedFor-持久化" class="headerlink" title="votedFor 持久化"></a>votedFor 持久化</h3><p>votefFor 需要被持久化存储也是为了确保选举安全特性。</p>
+<p>假设一共有三台服务器A、B、C。A收到了B发来的投票请求，这时A检查发现自己的 votedFor 为空，于是给B投票。</p>
+<p>然后A马上就崩溃重启了，这时收到C发来的投票请求，由于 votedFor 没有被持久化存储，因此B检查发现自己的 votedFor 为空，然后也会给C投票。这样B、C都收到了过半数的投票，B、C都会成为 Leader，这就违反了选举安全特性。</p>
+<h3 id="log-持久化"><a href="#log-持久化" class="headerlink" title="log[] 持久化"></a>log[] 持久化</h3><p>日志需要被持久化存储是因为在崩溃重启后，应用程序可以根据保存的日志条目来重建崩溃前的运行状态。</p>
+<p>假设由于断电或者其他原因导致所有的服务器全都重启了，这时所有的服务器都没有任何关于之前的日志条目信息，这样的话就不可能恢复到崩溃前的运行状态了。</p>
+<h2 id="LAB-2C-中遇到的问题"><a href="#LAB-2C-中遇到的问题" class="headerlink" title="LAB 2C 中遇到的问题"></a>LAB 2C 中遇到的问题</h2><p>最后说一说，在实现 6.824 的 LAB 2C 的过程中遇到的两个 Bug。</p>
+<h3 id="Bug-1"><a href="#Bug-1" class="headerlink" title="Bug 1"></a>Bug 1</h3><p>遇到的第一个Bug的错误日志如下所示：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><code class="hljs go">                                    S1 starts election                                                                                                                      <br>                                    S1 becomes Candidate                                                                                                                    <br>                                    S1 change term from <span class="hljs-number">40</span> to <span class="hljs-number">41</span>                                                                                                            <br>                                    S1 votes <span class="hljs-keyword">for</span> S1                                                                                                                         <br>S0 receives VoteRequestRpc from S1                                                                                                                                          <br>S0 becomes Follower                                                                                                                                                         <br>S0 changes term from <span class="hljs-number">40</span> to <span class="hljs-number">41</span>                                                                                                                                               <br>S0 votes <span class="hljs-keyword">for</span> S1                                                                                                                                                             <br>                                                                      S2 receives VoteRequestRpc from                                                                       <br>                                                                      S1                                                                                                    <br>                                                                      S2 changes term from <span class="hljs-number">40</span> to <span class="hljs-number">41</span>                                                                         <br>                                                                                                                                          S4 sends hearbeat                 <br>                                                                                                                                          。。。。。。。。。<br><br>                                                                                                        S3 starts election                                                  <br>                                                                                                        S3 change term from <span class="hljs-number">40</span> to <span class="hljs-number">41</span>                                        <br>                                                                                                        S3 votes <span class="hljs-keyword">for</span> S3                                                     <br>                                                                                                                                          S4 sends hearbeat                 <br>                                                                                                                                           。。。。。。。。。<br><br>S0 starts election                                                                                                                                                          <br>S0 becomes Candidate                                                                                                                                                        <br>S0 change term from <span class="hljs-number">41</span> to <span class="hljs-number">42</span>                                                                                                                                                <br>S0 votes <span class="hljs-keyword">for</span> S0                                                                                                                                                             <br>                                    S1 receives VoteRequestRpc from                                                                                                         <br>                                    S0                                                                                                                                      <br>                                    S1 becomes Follower                                                                                                                     <br>                                    S1 changes term from <span class="hljs-number">41</span> to <span class="hljs-number">42</span>                                                                                                           <br>                                    S1 votes <span class="hljs-keyword">for</span> S0                                                                                                                         <br>                                                                      S2 receives VoteRequestRpc from                                                                       <br>                                                                      S0                                                                                                    <br>                                                                      S2 changes term from <span class="hljs-number">41</span> to <span class="hljs-number">42</span>                                                                         <br>                                                                                                                                          S4 sends hearbeat                 <br>                                                                                                                                           。。。。。。。。。<br><br>                                                                                                        S3 starts election                                                  <br>                                                                                                        S3 change term from <span class="hljs-number">41</span> to <span class="hljs-number">42</span>                                        <br>                                                                                                        S3 votes <span class="hljs-keyword">for</span> S3                                                     <br>                                                                                                                                          S4 sends hearbeat                 <br>                                                                                                                                           。。。。。。。。。<br><br>                                    S1 starts election                                                                                                                      <br>                                    S1 becomes Candidate                                                                                                                    <br>                                    S1 change term from <span class="hljs-number">42</span> to <span class="hljs-number">43</span>                                                                                                            <br>                                    S1 votes <span class="hljs-keyword">for</span> S1                                                                                                                         <br>S0 receives VoteRequestRpc from S1                                                                                                                                          <br>S0 becomes Follower                                                                                                                                                         <br>S0 changes term from <span class="hljs-number">42</span> to <span class="hljs-number">43</span>                                                                                                                                               <br>                                                                      S2 receives VoteRequestRpc from                                                                       <br>                                                                      S1                                                                                                    <br>                                                                      S2 changes term from <span class="hljs-number">42</span> to <span class="hljs-number">43</span>                                                                         <br>S0 votes <span class="hljs-keyword">for</span> S1  <br></code></pre></td></tr></table></figure>
+
+<p>在这个场景中，S0、S1和S2在一个网络分区中，S3 和 S4 分别在一个网络分区中。S0、S1的日志没有S2的日志新。</p>
+<p>从日志中可以看到，S1总是先发起选举，然后S2收到S1的投票请求后会转化为跟随者，S2会重置自己的选举计时器，这就导致S2一直无法发起选举投票。</p>
+<p>解决方法是，在收到投票请求时，如果需要转化为跟随者，则不重置选举计时器：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">if</span> args.Term &gt; rf.currentTerm &#123;<br>    rf.convertToFollower(args.Term, <span class="hljs-literal">false</span>)<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(rf *Raft)</span></span> convertToFollower(term <span class="hljs-type">int</span>, resetFlag <span class="hljs-type">bool</span>) &#123;<br>    <span class="hljs-comment">// .......</span><br>    <span class="hljs-comment">// .......</span><br>    <span class="hljs-keyword">if</span> resetFlag &#123;<br>        rf.electionStart = time.Now()<br>        rf.electionTimeout = rf.randomElectionTimeout()<br>    &#125;<br>    <span class="hljs-keyword">go</span> rf.ticker()<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>这样，即使S2在收到S1的投票请求后转化为跟随者，也不会重置选举超时计时器，在一定时间后S2将能够发起选举投票。</p>
+<h3 id="Bug-2"><a href="#Bug-2" class="headerlink" title="Bug 2"></a>Bug 2</h3><p>遇到的第二个Bug的错误日志如下所示：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-number">018750</span> LEAD S2 sends hearbeat<br><span class="hljs-number">018750</span> INFO S2 sends hearbeat to S4: &amp;&#123;Term:<span class="hljs-number">4</span> LeaderId:<span class="hljs-number">2</span> PrevLogIndex:<span class="hljs-number">2</span> PrevLogTerm:<span class="hljs-number">3</span> Entries:[&#123;Command:<span class="hljs-number">2420</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">3</span>&#125; &#123;Command:<span class="hljs-number">6554</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">4</span>&#125; &#123;Command:<span class="hljs-number">6316</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">5</span>&#125; &#123;Command:<span class="hljs-number">648</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">6</span>&#125; &#123;Command:<span class="hljs-number">3226</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">7</span>&#125; &#123;Command:<span class="hljs-number">9916</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">8</span>&#125; &#123;Command:<span class="hljs-number">6121</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">9</span>&#125; &#123;Command:<span class="hljs-number">9155</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">10</span>&#125; &#123;Command:<span class="hljs-number">9102</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">11</span>&#125; &#123;Command:<span class="hljs-number">1911</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">12</span>&#125;] LeaderCommit:<span class="hljs-number">0</span>&#125;<br><span class="hljs-number">018752</span> INFO S2 sends hearbeat to S0: &amp;&#123;Term:<span class="hljs-number">4</span> LeaderId:<span class="hljs-number">2</span> PrevLogIndex:<span class="hljs-number">2</span> PrevLogTerm:<span class="hljs-number">3</span> Entries:[&#123;Command:<span class="hljs-number">2420</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">3</span>&#125; &#123;Command:<span class="hljs-number">6554</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">4</span>&#125; &#123;Command:<span class="hljs-number">6316</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">5</span>&#125; &#123;Command:<span class="hljs-number">648</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">6</span>&#125; &#123;Command:<span class="hljs-number">3226</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">7</span>&#125; &#123;Command:<span class="hljs-number">9916</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">8</span>&#125; &#123;Command:<span class="hljs-number">6121</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">9</span>&#125; &#123;Command:<span class="hljs-number">9155</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">10</span>&#125; &#123;Command:<span class="hljs-number">9102</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">11</span>&#125; &#123;Command:<span class="hljs-number">1911</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">12</span>&#125;] LeaderCommit:<span class="hljs-number">0</span>&#125;<br><span class="hljs-number">018753</span> INFO S2 sends hearbeat to S1: &amp;&#123;Term:<span class="hljs-number">4</span> LeaderId:<span class="hljs-number">2</span> PrevLogIndex:<span class="hljs-number">2</span> PrevLogTerm:<span class="hljs-number">3</span> Entries:[&#123;Command:<span class="hljs-number">2420</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">3</span>&#125; &#123;Command:<span class="hljs-number">6554</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">4</span>&#125; &#123;Command:<span class="hljs-number">6316</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">5</span>&#125; &#123;Command:<span class="hljs-number">648</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">6</span>&#125; &#123;Command:<span class="hljs-number">3226</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">7</span>&#125; &#123;Command:<span class="hljs-number">9916</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">8</span>&#125; &#123;Command:<span class="hljs-number">6121</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">9</span>&#125; &#123;Command:<span class="hljs-number">9155</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">10</span>&#125; &#123;Command:<span class="hljs-number">9102</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">11</span>&#125; &#123;Command:<span class="hljs-number">1911</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">12</span>&#125;] LeaderCommit:<span class="hljs-number">0</span>&#125;<br><span class="hljs-number">018754</span> INFO S2 sends hearbeat to S3: &amp;&#123;Term:<span class="hljs-number">4</span> LeaderId:<span class="hljs-number">2</span> PrevLogIndex:<span class="hljs-number">2</span> PrevLogTerm:<span class="hljs-number">3</span> Entries:[&#123;Command:<span class="hljs-number">2420</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">3</span>&#125; &#123;Command:<span class="hljs-number">6554</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">4</span>&#125; &#123;Command:<span class="hljs-number">6316</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">5</span>&#125; &#123;Command:<span class="hljs-number">648</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">6</span>&#125; &#123;Command:<span class="hljs-number">3226</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">7</span>&#125; &#123;Command:<span class="hljs-number">9916</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">8</span>&#125; &#123;Command:<span class="hljs-number">6121</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">9</span>&#125; &#123;Command:<span class="hljs-number">9155</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">10</span>&#125; &#123;Command:<span class="hljs-number">9102</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">11</span>&#125; &#123;Command:<span class="hljs-number">1911</span> Term:<span class="hljs-number">4</span> CommandIndex:<span class="hljs-number">12</span>&#125;] LeaderCommit:<span class="hljs-number">0</span>&#125;<br><span class="hljs-number">018764</span> VOTE S2 receives VoteRequestRpc from S3<br><span class="hljs-number">018764</span> INFO S2 becomes Follower<br><span class="hljs-number">018764</span> TERM S2 changes term from <span class="hljs-number">4</span> to <span class="hljs-number">5</span><br><span class="hljs-number">018866</span> VOTE S2 starts election<br><span class="hljs-number">018867</span> INFO S2 becomes Candidate<br><span class="hljs-number">018867</span> TERM S2 change term from <span class="hljs-number">5</span> to <span class="hljs-number">6</span><br><span class="hljs-number">018867</span> VOTE S2 votes <span class="hljs-keyword">for</span> S2<br><span class="hljs-number">018869</span> VOTE S1 receives VoteRequestRpc from S3<br><span class="hljs-number">018869</span> TERM S1 changes term from <span class="hljs-number">4</span> to <span class="hljs-number">5</span><br><span class="hljs-number">018870</span> VOTE S1 votes <span class="hljs-keyword">for</span> S3<br><span class="hljs-number">018988</span> INFO S3 receives AppendEntriesRpc from S2<br><span class="hljs-number">018988</span> INFO S3 reply AppendEntriesRpc from S2: &amp;Reply&#123;Term: <span class="hljs-number">5</span>, Success: <span class="hljs-literal">false</span>&#125;<br><span class="hljs-number">018992</span> VOTE S3 receives VoteRequestRpc from S2<br><span class="hljs-number">018992</span> INFO S3 becomes Follower<br><span class="hljs-number">018992</span> TERM S3 changes term from <span class="hljs-number">5</span> to <span class="hljs-number">6</span><br><span class="hljs-number">018992</span> VOTE S3 votes <span class="hljs-keyword">for</span> S2<br><span class="hljs-number">019029</span> VOTE S1 receives VoteRequestRpc from S2<br><span class="hljs-number">019029</span> TERM S1 changes term from <span class="hljs-number">5</span> to <span class="hljs-number">6</span><br><span class="hljs-number">019029</span> VOTE S1 votes <span class="hljs-keyword">for</span> S2<br><span class="hljs-number">019032</span> INFO S2 becomes Leader<br><span class="hljs-number">019032</span> LEAD S2 sends hearbeat<br><span class="hljs-number">019033</span> INFO S2 sends hearbeat to S4: &amp;&#123;Term:<span class="hljs-number">6</span> LeaderId:<span class="hljs-number">2</span> PrevLogIndex:<span class="hljs-number">12</span> PrevLogTerm:<span class="hljs-number">4</span> Entries:[] LeaderCommit:<span class="hljs-number">0</span>&#125;<br><span class="hljs-number">019035</span> INFO S1 receives AppendEntriesRpc from S2<br><span class="hljs-number">019035</span> INFO S1 reply AppendEntriesRpc from S2: &amp;Reply&#123;Term: <span class="hljs-number">6</span>, Success: <span class="hljs-literal">false</span>&#125;<br><span class="hljs-built_in">panic</span>: runtime <span class="hljs-type">error</span>: index out of <span class="hljs-keyword">range</span> [<span class="hljs-number">-1</span>]<br></code></pre></td></tr></table></figure>
+
+<p>这是一个由于负数索引导致的运行崩溃错误，代码如下所示（在第20行崩溃）：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><code class="hljs go">rf.mu.Lock()<br><span class="hljs-comment">// 已经不是领导人了，直接返回</span><br><span class="hljs-keyword">if</span> rf.role != LEADER &#123;<br>    rf.mu.Unlock()<br>    <span class="hljs-keyword">return</span><br>&#125;<br><span class="hljs-comment">// 跟随者节点已经被Kill了，直接返回</span><br><span class="hljs-keyword">if</span> reply.Term &lt; rf.currentTerm &#123;<br>    rf.mu.Unlock()<br>    <span class="hljs-keyword">return</span><br>&#125;<br><span class="hljs-keyword">if</span> reply.Term &gt; rf.currentTerm &#123;<br>    rf.convertToFollower(reply.Term, <span class="hljs-literal">true</span>)<br>    rf.mu.Unlock()<br>    <span class="hljs-keyword">return</span><br>&#125;<br><span class="hljs-keyword">if</span> !reply.Success &#123;<br>    <span class="hljs-keyword">if</span> reply.XTerm == <span class="hljs-number">-1</span> &#123;<br>        rf.nextIndex[peerId] = prevLogIndex - reply.XLen + <span class="hljs-number">1</span><br>    &#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> reply.XTerm == rf.log[reply.XIndex<span class="hljs-number">-1</span>].Term &#123;<br>        rf.nextIndex[peerId] = reply.XIndex + <span class="hljs-number">1</span><br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        rf.nextIndex[peerId] = reply.XIndex<br>    &#125;<br>&#125; <span class="hljs-keyword">else</span> &#123;<br>    <span class="hljs-comment">// ....</span><br>    <span class="hljs-comment">// .....</span><br>&#125;<br>rf.mu.Unlock()<br></code></pre></td></tr></table></figure>
+
+<p>在我的实现中只有三种情况 <code>reply.Success = false</code>：</p>
+<ul>
+<li><p>节点已经被Kill了，这时候会返回 <code>reply.Term = 0</code></p>
+</li>
+<li><p>收到的心跳的任期号比当前节点的任期号小，这时候会返回 <code>reply.Term=XX</code></p>
+</li>
+<li><p>收到的心跳的<code>prevLogIndex</code>位置的日志不匹配，这时候会返回 <code>reply.XTerm=-1</code> 或 <code>reply.XIndex=YY</code></p>
+</li>
+</ul>
+<p>第一种情况，第八行的代码会将其排除。第二种情况，第十二行代码会将其排除。第三种情况，如果要走到第20行，则只能是 <code>reply.XIndex=YY</code>，但是我的实现中 <code>YY</code> 一定大于0。这样，所有情况都排除了，那么为什么会出现这个问题呢？</p>
+<p>通过观察日志可以发现，在第四行，S2给S1发送了一个心跳：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs go">S2 sends hearbeat to S1: &amp;&#123;Term:<span class="hljs-number">4</span>, ......&#125;<br></code></pre></td></tr></table></figure>
+
+<p>此时S2的任期号为4。从第四行到第25行，S2先是变成了Follower，之后又在任期6被选举成为Leader。</p>
+<p>在第28行，S1终于收到了S2发送的心跳，此时S1的保存的任期号为6，因此它会返回 <code>Reply&#123;Term: 6, Success: false, XIndex=0&#125;</code>。这是前面提到的第二中情况，但是此时S2的任期号也变成了6，因此第十二行代码就无法排除这种情况。最终代码就会执行到第20行，导致运行时崩溃。</p>
+<p>可见，这是由于网络延迟导致的错误，解决方法也很简单，在第20行代码之前在加一个判断，如果<code>reply.XIndex=0</code>则不执行后面的代码了：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">if</span> reply.XTerm == <span class="hljs-number">-1</span> &#123;<br>    rf.nextIndex[peerId] = prevLogIndex - reply.XLen + <span class="hljs-number">1</span><br>&#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> reply.XIndex != <span class="hljs-number">0</span> &#123;<br>    <span class="hljs-keyword">if</span> reply.XTerm == rf.log[reply.XIndex<span class="hljs-number">-1</span>].Term &#123;<br>        rf.nextIndex[peerId] = reply.XIndex + <span class="hljs-number">1</span><br>    &#125; <span class="hljs-keyword">else</span> &#123;<br>        rf.nextIndex[peerId] = reply.XIndex<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>解决完上述的两个Bug后，并发跑500次测试，全部顺利通过：</p>
+<img src="/2022/08/06/Raft-4/Raft-%E5%9B%BE1.png" srcset="/img/loading.gif" lazyload class="">
+
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><p><a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.824/">MIT 6.824</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://raft.github.io/raft.pdf">Raft paper</a></p>
+</li>
+</ul>
+
+              
+            </div>
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/distributed-system/" class="category-chain-item">distributed system</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/consistency/">#consistency</a>
+      
+        <a href="/tags/distributed/">#distributed</a>
+      
+        <a href="/tags/paper/">#paper</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Raft（四）：持久化存储</div>
+      <div>https://night-cruise.github.io/2022/08/06/Raft-4/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Night Cruise</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年8月6日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/07/31/Raft-3/" title="Raft（三）：日志复制">
+                        <span class="hidden-mobile">Raft（三）：日志复制</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.0/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
