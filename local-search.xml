@@ -4,6 +4,35 @@
   
   
   <entry>
+    <title>Raft（五）：日志压缩快照</title>
+    <link href="/2022/08/08/Raft-5/"/>
+    <url>/2022/08/08/Raft-5/</url>
+    
+    <content type="html"><![CDATA[<h2 id="为什么需要快照？"><a href="#为什么需要快照？" class="headerlink" title="为什么需要快照？"></a>为什么需要快照？</h2><p>在 Raft 中，Log 压缩和快照解决的问题是：</p><ul><li><p>节约内存和磁盘的存储空间。对于一个长期运行的系统，例如运行了几周，几个月甚至几年，如果按照 Raft 论文图2的规则，那么 Log 会无限增长。最后可能会有数百万条 Log，从而需要大量的内存来存储。如果持久化存储在磁盘上，最终会消耗磁盘的大量空间。</p></li><li><p>减少崩溃重启后恢复应用程序状态花费的时间。如果一个服务器重启了，它需要重新从头开始执行这数百万条 Log 来重建自己的状态。当故障重启之后，遍历并执行整个 Log 的内容可能要花费几个小时来完成。这在某种程度上来说是浪费，因为在重启之前，服务器已经有了一定的应用程序状态。</p></li></ul><p>为了应对上面的问题，Raft 有了快照的概念。快照背后的思想是，将应用程序状态的拷贝单独存储下来。</p><p>对于大多数的应用程序来说，应用程序的状态远小于 Log 的大小。某种程度上，在某些时间点，Log 和应用程序的状态是可以互换的，它们是用来表示应用程序状态的不同事物。但是 Log 可能包含大量的重复的记录（例如KV存储中对同一个键的重复赋值），这些记录使用了 Log 中的大量的空间，但是可以压缩为表示应用程序状态的一条记录。这条记录通常比 Log 小的多，这就是快照的背后原理。</p><h2 id="快照实现策略"><a href="#快照实现策略" class="headerlink" title="快照实现策略"></a>快照实现策略</h2><p>当 Raft 认为它的 Log 太大，例如大于1MB，10MB或者任意的限制，Raft 会从 Log 中选取一个与快照对应的点，然后要求应用程序在那个点的位置做一个快照。之后，Raft 会持久化存储快照并丢弃快照点之前的日志条目。</p><p>当 Raft 服务器崩溃重启后，应用程序读取持久化存储的快照，恢复在快照点对应的状态。</p><p>但是，由于丢弃了快照之前 Log，这引入了大量的复杂性。如果有的 Follower 的 Log 很短，比 Leader 的快照点还短，那么 Leader 就不可能与 Follower 的日志匹配成功，因此 Leader 就无法通过 AppendEntries 的方式让 Follower 的 Log 补齐至 Leader 的 Log。</p><p>一种可能的解决方式是，如果 Leader 发现有任何一个 Follower 的 Log 落后于 Leader 快照的点，那么 Leader 就不丢弃快照之前的 Log。但是如果一个 Follower 关机了很长一段时间，那么 Leader 就不能确认这个 Follower 的 Log 条目，这就意味着 Leader 不能通过快照来减少自己的存储消耗。</p><p>Raft 选择的方法是，Leader 可以丢弃 Follower 需要的 Log。因此，我们需要某种机制能够处理 Follower Log 的结尾到 Leader Log 开始之间缺失的 Log，解决方法是 InstallSnapshot RPC。</p><p>当 Follower 收到 AppendEntries RPC 时，如果日志不匹配则会返回 false。Leader 收到 false 返回后，会回退自己的 Log，直到某个点为止 Leader 将不能再回退，此时它已经到了自己 Log 的起点。这时，Leader 会将自己的快照发给 Follower，之后通过 AppendEntries 将后面的 Log 发给 Follower。</p><p>具体的 InstallSnapshot 算法可以查看 <a href="https://raft.github.io/raft.pdf">Raft paper</a>（第七节）。</p><h2 id="LAB-2D"><a href="#LAB-2D" class="headerlink" title="LAB 2D"></a>LAB 2D</h2><p>LAB 2D 的实现不难，但是小细节挺多的。虽然实现的过程中遇到了很多Bug，但是都属于那种一眼就能知道问题在哪儿的类型，所以这里就不列举了。</p><p>最后，并发跑500次测试，全部顺利通过：</p><img src="/2022/08/08/Raft-5/Raft-%E5%9B%BE1.png" class=""><h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul><li><p><a href="https://pdos.csail.mit.edu/6.824/">MIT 6.824</a></p></li><li><p><a href="https://raft.github.io/raft.pdf">Raft paper</a></p></li></ul>]]></content>
+    
+    
+    <categories>
+      
+      <category>distributed system</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>consistency</tag>
+      
+      <tag>distributed</tag>
+      
+      <tag>paper</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>Raft（四）：持久化存储</title>
     <link href="/2022/08/06/Raft-4/"/>
     <url>/2022/08/06/Raft-4/</url>
