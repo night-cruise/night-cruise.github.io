@@ -4,7 +4,7 @@
   
   
   <entry>
-    <title>Raft（五）：日志压缩快照</title>
+    <title>Raft（五）：日志压缩和快照</title>
     <link href="/2022/08/08/Raft-5/"/>
     <url>/2022/08/08/Raft-5/</url>
     
