@@ -17,26 +17,32 @@
   <meta name="author" content="Night Cruise">
   <meta name="keywords" content="">
   
-    <meta name="description" content="the snapshot in raft">
+    <meta name="description" content="the distributed key&#x2F;value service without snapshot">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Raft（五）：日志压缩和快照">
-<meta property="og:url" content="https://night-cruise.github.io/2022/08/08/Raft-5/index.html">
+<meta property="og:title" content="Fault-tolerant Key&#x2F;Value Service（一）">
+<meta property="og:url" content="https://night-cruise.github.io/2022/08/19/Fault-tolerant-Key-Value-Service/index.html">
 <meta property="og:site_name" content="阿愁">
-<meta property="og:description" content="the snapshot in raft">
+<meta property="og:description" content="the distributed key&#x2F;value service without snapshot">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://night-cruise.github.io/2022/08/08/Raft-5/Raft-%E5%9B%BE1.png">
-<meta property="article:published_time" content="2022-08-08T15:20:52.000Z">
-<meta property="article:modified_time" content="2022-08-09T12:53:23.473Z">
+<meta property="og:image" content="https://night-cruise.github.io/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE1.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE2.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE3.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE4.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE5.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE7.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE6.png">
+<meta property="article:published_time" content="2022-08-19T09:10:03.000Z">
+<meta property="article:modified_time" content="2022-08-19T13:41:36.070Z">
 <meta property="article:author" content="Night Cruise">
-<meta property="article:tag" content="consistency">
 <meta property="article:tag" content="distributed">
-<meta property="article:tag" content="paper">
+<meta property="article:tag" content="Fault-tolerant">
+<meta property="article:tag" content="Key&#x2F;Value Service">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://night-cruise.github.io/2022/08/08/Raft-5/Raft-%E5%9B%BE1.png">
+<meta name="twitter:image" content="https://night-cruise.github.io/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE1.png">
   
   
   
-  <title>Raft（五）：日志压缩和快照 - 阿愁</title>
+  <title>Fault-tolerant Key/Value Service（一） - 阿愁</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -199,7 +205,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="Raft（五）：日志压缩和快照"></span>
+            <span id="subtitle" data-typed-text="Fault-tolerant Key/Value Service（一）"></span>
           
         </div>
 
@@ -210,8 +216,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2022-08-08 23:20" pubdate>
-          2022年8月8日 晚上
+        <time datetime="2022-08-19 17:10" pubdate>
+          2022年8月19日 下午
         </time>
       </span>
     
@@ -222,7 +228,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          1.4k 字
+          3.6k 字
         
       </span>
     
@@ -233,7 +239,7 @@
         
         
         
-          12 分钟
+          31 分钟
         
       </span>
     
@@ -271,35 +277,75 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">Raft（五）：日志压缩和快照</h1>
+            <h1 style="display: none">Fault-tolerant Key/Value Service（一）</h1>
             
             <div class="markdown-body">
               
-              <h2 id="为什么需要快照？"><a href="#为什么需要快照？" class="headerlink" title="为什么需要快照？"></a>为什么需要快照？</h2><p>在 Raft 中，Log 压缩和快照解决的问题是：</p>
+              <h2 id="LAB-3：分布式KV"><a href="#LAB-3：分布式KV" class="headerlink" title="LAB 3：分布式KV"></a>LAB 3：分布式KV</h2><p>6.824 LAB 3的内容是基于LAB 2实现的Raft库构建一个容错的Key&#x2F;Value服务。</p>
+<p>容错的Key&#x2F;Value服务是一个复制状态机，由多个使用Raft进行复制的Key&#x2F;Value服务器组成。由于底层使用Raft实现复制，因此只要过半服务器没有故障并且能够互相通信，那么构建的Key&#x2F;Value服务就能够一直处理客户请求。整体架构如图所示：</p>
+<img src="/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE1.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>客户端可以向Key&#x2F;Value服务发送三种不同的RPC：</p>
 <ul>
-<li><p>节约内存和磁盘的存储空间。对于一个长期运行的系统，例如运行了几周，几个月甚至几年，如果按照 Raft 论文图2的规则，那么 Log 会无限增长。最后可能会有数百万条 Log，从而需要大量的内存来存储。如果持久化存储在磁盘上，最终会消耗磁盘的大量空间。</p>
+<li><p>Put(key, value)：替换数据库中某一特定Key对应的Value。</p>
 </li>
-<li><p>减少崩溃重启后恢复应用程序状态花费的时间。如果一个服务器重启了，它需要重新从头开始执行这数百万条 Log 来重建自己的状态。当故障重启之后，遍历并执行整个 Log 的内容可能要花费几个小时来完成。这在某种程度上来说是浪费，因为在重启之前，服务器已经有了一定的应用程序状态。</p>
+<li><p>Append(key, arg)：将arg附加到Key对应的Value上。</p>
+</li>
+<li><p>Get(key)：获取Key对应的Value。对于一个不存在的Key，Get应该返回一个空字符串。</p>
 </li>
 </ul>
-<p>为了应对上面的问题，Raft 有了快照的概念。快照背后的思想是，将应用程序状态的拷贝单独存储下来。</p>
-<p>对于大多数的应用程序来说，应用程序的状态远小于 Log 的大小。某种程度上，在某些时间点，Log 和应用程序的状态是可以互换的，它们是用来表示应用程序状态的不同事物。但是 Log 可能包含大量的重复的记录（例如KV存储中对同一个键的重复赋值），这些记录使用了 Log 中的大量的空间，但是可以压缩为表示应用程序状态的一条记录。这条记录通常比 Log 小的多，这就是快照的背后原理。</p>
-<h2 id="快照实现策略"><a href="#快照实现策略" class="headerlink" title="快照实现策略"></a>快照实现策略</h2><p>当 Raft 认为它的 Log 太大，例如大于1MB，10MB或者任意的限制，Raft 会从 Log 中选取一个与快照对应的点，然后要求应用程序在那个点的位置做一个快照。之后，Raft 会持久化存储快照并丢弃快照点之前的日志条目。</p>
-<p>当 Raft 服务器崩溃重启后，应用程序读取持久化存储的快照，恢复在快照点对应的状态。</p>
-<p>但是，由于丢弃了快照之前 Log，这引入了大量的复杂性。如果有的 Follower 的 Log 很短，比 Leader 的快照点还短，那么 Leader 就不可能与 Follower 的日志匹配成功，因此 Leader 就无法通过 AppendEntries 的方式让 Follower 的 Log 补齐至 Leader 的 Log。</p>
-<p>一种可能的解决方式是，如果 Leader 发现有任何一个 Follower 的 Log 落后于 Leader 快照的点，那么 Leader 就不丢弃快照之前的 Log。但是如果一个 Follower 关机了很长一段时间，那么 Leader 就不能确认这个 Follower 的 Log 条目，这就意味着 Leader 不能通过快照来减少自己的存储消耗。</p>
-<p>Raft 选择的方法是，Leader 可以丢弃 Follower 需要的 Log。因此，我们需要某种机制能够处理 Follower Log 的结尾到 Leader Log 开始之间缺失的 Log，解决方法是 InstallSnapshot RPC。</p>
-<p>当 Follower 收到 AppendEntries RPC 时，如果日志不匹配则会返回 false。Leader 收到 false 返回后，会回退自己的 Log，直到某个点为止 Leader 将不能再回退，此时它已经到了自己 Log 的起点。这时，Leader 会将自己的快照发给 Follower，之后通过 AppendEntries 将后面的 Log 发给 Follower。</p>
-<p>具体的 InstallSnapshot 算法可以查看 <a target="_blank" rel="noopener" href="https://raft.github.io/raft.pdf">Raft paper</a>（第七节）。</p>
-<h2 id="LAB-2D"><a href="#LAB-2D" class="headerlink" title="LAB 2D"></a>LAB 2D</h2><p>LAB 2D 的实现不难，但是小细节挺多的。虽然实现的过程中遇到了很多Bug，但是都属于那种一眼就能知道问题在哪儿的类型，所以这里就不列举了。</p>
-<p>最后，并发跑500次测试，全部顺利通过：</p>
-<img src="/2022/08/08/Raft-5/Raft-%E5%9B%BE1.png" srcset="/img/loading.gif" lazyload class="">
+<p>每个客户端通过Clerk的Put&#x2F;Append&#x2F;Put方法与服务进行通信，Clerk负责管理与服务的RPC交互。</p>
+<p>LAB 3要求客户端对Clerk的Get&#x2F;Put&#x2F;Append方法的调用是可线性化的。如果一次调用一个，Get&#x2F;Put&#x2F;Append方法应该表现得像系统只有一个副本一样，并且每次调用都应该观察到前面的调用序列对状态的修改（一个操作只能执行一次）。对于并发调用，返回值和最终状态必须与操作按某种顺序一次执行一个得到的结果相同。如果调用在时间上重叠，就是并发的：例如，如果客户端X调用Clerk.Put()，客户端Y调用Clerk.Append()，然后客户端X的调用返回。一个调用必须观察到在该调用开始之前已经完成的所有调用的效果。</p>
+<h2 id="实现线性一致性"><a href="#实现线性一致性" class="headerlink" title="实现线性一致性"></a>实现线性一致性</h2><p>由于使用Raft实现复制，写操作已经实现了线性一致性，因为所有的服务器都会按照相同的顺序执行相同的写操作：</p>
+<img src="/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE2.png" srcset="/img/loading.gif" lazyload class="">
 
+<p>对于读操作，我们可以把客户端的Get请求只发送到Leader，来确保一定能够读到最近写入的值。但是这样，需要额外的机制来验证这个Leader是否是真的Leader，因为一个困在分区中的Leader是一个假Leader。</p>
+<p>可以把读操作也提交到Raft日志中，这样所有的读写操作在所有的服务器中都会按照相同的顺序执行，并且读操作一定能够看到它之前的写操作写入的值。这种方法的缺点是性能差，为了把读操作的日志复制给大多数服务器，至少需要发送一轮AppendEntries RPC，需要花费10MS以上的时间。</p>
+<h2 id="过滤重复请求"><a href="#过滤重复请求" class="headerlink" title="过滤重复请求"></a>过滤重复请求</h2><p>当一个客户端向Key&#x2F;Value服务器发送一个请求后，在超时时间内这个服务器可能执行不完这个请求，服务器会返回一个error给客户端，之后客户端会重新发送这个请求个这个服务器。因此，客户端可能会发送多条重复的请求给服务端。</p>
+<p>这种情况下，服务器需要有能力过滤掉重复的请求，确保每个请求只执行一次。否则，服务器执行重复请求可能会导致状态的错误更改，导致违反线性一致性。</p>
+<p>比如，客户端X向服务器发送请求 <code>Append(&quot;K&quot;, &quot;Hello&quot;)</code>，之后由于一些原因客户端X再次发送请求 <code>Append(&quot;K&quot;, &quot;Hello&quot;)</code>，如果服务器不过滤掉重复的请求，那么 <code>K</code> 对应的 Value 就会变为 <code>HelloHello</code>。但是在客户端看来，我只想要追加一个 <code>Hello</code>，最终却追加了两个，这显然不符合要求。</p>
+<p>解决方法是在客户端存储一个客户端标识符和请求ID，并在服务端存储一张表，表中的每一项是客户端的标识符和对应的请求ID，请求ID是一个从1开始的递增整数。客户端每次发送请求时都把请求ID加一，然后把客户端标识符和请求ID附加到发送的请求中；服务器收到这个请求后可以查看这个客户端对应的最大请求ID，只有当发送过来的请求ID大于服务器存储的最大请求ID才执行这个请求，否者说明是一个重复的请求，直接返回即可。</p>
+<h2 id="LAB-3A中遇到的问题"><a href="#LAB-3A中遇到的问题" class="headerlink" title="LAB 3A中遇到的问题"></a>LAB 3A中遇到的问题</h2><h3 id="架构理解错误"><a href="#架构理解错误" class="headerlink" title="架构理解错误"></a>架构理解错误</h3><p>在实现LAB 3A的是否遇到的第一个问题就是把架构理解错了。在我原先的理解中，系统中只存在一个Clerk，然后存在多个客户端，所有的客户端都调用同一个Clerk的Put&#x2F;Append&#x2F;Get方法，因此对Clerk的调用是并发的：</p>
+<img src="/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE3.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>但是，这样的话无法知道是谁调用的Put&#x2F;Append&#x2F;Get方法，因为这些方法中没有客户端ID这个参数。我原来的想法是Clerk每次发送请求之前先生成一个随机的请求ID，之后发送请求时附带上这个ID。这样服务端在执行完一条请求后就可以把这个请求ID和执行结果存储在一条表中，之后如果客户端发送了一条重复的请求，我们就可以根据请求ID直接把结果返回，而不需要再次执行。</p>
+<p>这个方法的问题随着请求的执行，服务端存储的请求ID和执行结果会越来越多，而且没有什么有效的清理无用数据的方法。</p>
+<p>想了半天没啥好的思路，我就找了一些博客，看了一下别人的LAB 3的实现思路，才发现我把LAB 3的架构理解错了。正确的架构是，有多个客户端，并且每个客户端有自己的Clerk，每个客户端阻塞调用自己的Clerk的Put&#x2F;Append&#x2F;Get方法：</p>
+<img src="/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE4.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>这样，就能够使用上面提到的过滤重复请求的方法了。</p>
+<h3 id="Bug-1"><a href="#Bug-1" class="headerlink" title="Bug 1"></a>Bug 1</h3><p>第一个遇到的问题是每条请求的执行时间过长，超过了33ms：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs go">--- FAIL: TestSpeed3A (<span class="hljs-number">101.08</span>s)<br>    test_test.<span class="hljs-keyword">go</span>:<span class="hljs-number">419</span>: Operations completed too slowly <span class="hljs-number">100.480114</span>ms/op &gt; <span class="hljs-number">33.333333</span>ms/op<br>FAIL<br>exit status <span class="hljs-number">1</span><br>FAIL    <span class="hljs-number">6.824</span>/kvraft    <span class="hljs-number">101.086</span>s<br></code></pre></td></tr></table></figure>
+
+<p>我反复检查了LAB 3A的代码实现，都没找到啥问题，去网上搜了一下才发现是LAB2的实现策略有问题。</p>
+<p>在我的LAB 2的实现中，心跳的间隔是100MS，并且只在心跳的是否才发送日志给其他的节点。如果只有一个客户端，客户端发送Put&#x2F;Append&#x2F;Get请求给服务器，服务器把这个请求提交给Raft，Raft需要等待100MS然后发送附加日志给其他的节点，之后才能提交执行这个请求，当服务器执行完这个请求后返回响应给客户端，之后客户端才能继续发起新的请求。因此，执行一条请求至少需要100MS，这没有达到33MS的要求。</p>
+<p>解决方法很简单，在Raft执行Start方法添加完一条日志后，就立马发送心跳，这样就不需要等待100MS了。</p>
+<h3 id="Bug-2"><a href="#Bug-2" class="headerlink" title="Bug 2"></a>Bug 2</h3><p>第二个Bug是与Go语言相关的。如果向<code>nil</code>管道发送值会发生死锁，发送端Go程会被永久阻塞。最开始我的实现是这样的：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs go">command.Ch &lt;- sendVal<br></code></pre></td></tr></table></figure>
+
+<p>如果当前的服务器不是Leader，那么<code>command.Ch</code>就等于<code>nil</code>，因此在发送前需要加一个判断：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">if</span> command.Ch != <span class="hljs-literal">nil</span> &#123;<br>    command.Ch &lt;- sendVal<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h3 id="Bug-3"><a href="#Bug-3" class="headerlink" title="Bug 3"></a>Bug 3</h3><p>第三个Bug还是与Go语言相关的。对于一个同步管道，只有当接收方准备接收的时候，发送方才能发送过去，否则发送方会永久阻塞。最开始我的实现是这样的：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-comment">// 某个函数</span><br><span class="hljs-keyword">if</span> command.Ch != <span class="hljs-literal">nil</span> &#123;<br>    command.Ch &lt;- sendVal<br>&#125;<br><br><br><span class="hljs-comment">// 某个函数</span><br><span class="hljs-keyword">select</span> &#123;<br><span class="hljs-keyword">case</span> value := &lt;-waitCh:<br>    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>, value<br><span class="hljs-keyword">case</span> &lt;-time.After(kv.waitTimeOut):<br>    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>, <span class="hljs-string">&quot;&quot;</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>如果在<code>kv.waitTimeOut</code>内还没有收到请求完成的通知，服务器会直接返回一个error给客户端。之后当请求完成后，执行<code>command.Ch &lt;- sendVal</code>就会发生永久阻塞，因为此时已经没有接收方了。</p>
+<p>解决方法是，在发送端也设置一个超时，如果在超时时间内没有发送成功就直接退出：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">if</span> command.Ch != <span class="hljs-literal">nil</span> &#123;<br>    <span class="hljs-keyword">select</span> &#123;<br>    <span class="hljs-keyword">case</span> command.Ch &lt;- sendVal:<br>    <span class="hljs-keyword">case</span> &lt;-time.After(time.Microsecond):<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>解决完所有Bug后，并发跑500次测试：</p>
+<img src="/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE5.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>TestSpeed3A有一次测试没有通过，错误日志中显示每条操作花了37MS，没有达到33MS&#x2F;op的要求，但是这个问题应该已经在Bug 1中被解决了。测试报告中显示，TestSpeed3A平均花费了78.41秒才完成，但是在单独测试中只花了10.9秒就完成了：</p>
+<img src="/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE7.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>我就猜测可能是测试的时候开的线程太多导致的，毕竟我的电脑性能不太行。那么，只开5个线程并发跑500次TestSpeed3A测试：</p>
+<img src="/2022/08/19/Fault-tolerant-Key-Value-Service/%E5%9B%BE6.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>所有的测试全部通过，并且平均只花费了13.13秒。</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
-<li><p><a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.824/">MIT 6.824</a></p>
-</li>
-<li><p><a target="_blank" rel="noopener" href="https://raft.github.io/raft.pdf">Raft paper</a></p>
-</li>
+<li><a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.824/">MIT 6.824</a></li>
+<li><a target="_blank" rel="noopener" href="https://raft.github.io/raft.pdf">Raft paper</a></li>
 </ul>
 
               
@@ -333,11 +379,11 @@
     <div class="post-meta">
       <i class="iconfont icon-tags"></i>
       
-        <a href="/tags/consistency/">#consistency</a>
-      
         <a href="/tags/distributed/">#distributed</a>
       
-        <a href="/tags/paper/">#paper</a>
+        <a href="/tags/Fault-tolerant/">#Fault-tolerant</a>
+      
+        <a href="/tags/Key-Value-Service/">#Key/Value Service</a>
       
     </div>
   
@@ -349,8 +395,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>Raft（五）：日志压缩和快照</div>
-      <div>https://night-cruise.github.io/2022/08/08/Raft-5/</div>
+      <div>Fault-tolerant Key/Value Service（一）</div>
+      <div>https://night-cruise.github.io/2022/08/19/Fault-tolerant-Key-Value-Service/</div>
     </div>
     <div class="license-meta">
       
@@ -362,7 +408,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2022年8月8日</div>
+          <div>2022年8月19日</div>
         </div>
       
       
@@ -392,18 +438,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/08/19/Fault-tolerant-Key-Value-Service/" title="Fault-tolerant Key/Value Service（一）">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">Fault-tolerant Key/Value Service（一）</span>
-                        <span class="visible-mobile">上一篇</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/08/06/Raft-4/" title="Raft（四）：持久化存储">
-                        <span class="hidden-mobile">Raft（四）：持久化存储</span>
+                      <a href="/2022/08/08/Raft-5/" title="Raft（五）：日志压缩和快照">
+                        <span class="hidden-mobile">Raft（五）：日志压缩和快照</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>

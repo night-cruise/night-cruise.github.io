@@ -1,3 +1,4 @@
+https://night-cruise.github.io/2022/08/19/Fault-tolerant-Key-Value-Service/
 https://night-cruise.github.io/2022/08/06/Raft-4/
 https://night-cruise.github.io/2022/08/08/Raft-5/
 https://night-cruise.github.io/about/index.html
@@ -16,6 +17,8 @@ https://night-cruise.github.io/tags/note/
 https://night-cruise.github.io/tags/concurrent/
 https://night-cruise.github.io/tags/parallel/
 https://night-cruise.github.io/tags/lock-free/
+https://night-cruise.github.io/tags/Fault-tolerant/
+https://night-cruise.github.io/tags/Key-Value-Service/
 https://night-cruise.github.io/categories/distributed-system/
 https://night-cruise.github.io/categories/rust/
 https://night-cruise.github.io/categories/concurrent/
