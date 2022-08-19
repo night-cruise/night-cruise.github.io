@@ -49,9 +49,9 @@
     
     <tags>
       
-      <tag>consistency</tag>
-      
       <tag>distributed</tag>
+      
+      <tag>consistency</tag>
       
       <tag>paper</tag>
       
@@ -78,9 +78,9 @@
     
     <tags>
       
-      <tag>consistency</tag>
-      
       <tag>distributed</tag>
+      
+      <tag>consistency</tag>
       
       <tag>paper</tag>
       
@@ -107,9 +107,9 @@
     
     <tags>
       
-      <tag>consistency</tag>
-      
       <tag>distributed</tag>
+      
+      <tag>consistency</tag>
       
       <tag>paper</tag>
       
@@ -136,9 +136,9 @@
     
     <tags>
       
-      <tag>consistency</tag>
-      
       <tag>distributed</tag>
+      
+      <tag>consistency</tag>
       
       <tag>paper</tag>
       
@@ -165,9 +165,9 @@
     
     <tags>
       
-      <tag>consistency</tag>
-      
       <tag>distributed</tag>
+      
+      <tag>consistency</tag>
       
       <tag>paper</tag>
       
@@ -194,11 +194,11 @@
     
     <tags>
       
+      <tag>rust</tag>
+      
       <tag>concurrent</tag>
       
       <tag>parallel</tag>
-      
-      <tag>rust</tag>
       
       <tag>lock-free</tag>
       

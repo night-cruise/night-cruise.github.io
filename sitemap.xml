@@ -101,21 +101,7 @@
 
   
   <url>
-    <loc>https://night-cruise.github.io/tags/consistency/</loc>
-    <lastmod>2022-08-19</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
     <loc>https://night-cruise.github.io/tags/distributed/</loc>
-    <lastmod>2022-08-19</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://night-cruise.github.io/tags/paper/</loc>
     <lastmod>2022-08-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -136,6 +122,34 @@
   </url>
   
   <url>
+    <loc>https://night-cruise.github.io/tags/consistency/</loc>
+    <lastmod>2022-08-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://night-cruise.github.io/tags/paper/</loc>
+    <lastmod>2022-08-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://night-cruise.github.io/tags/rust/</loc>
+    <lastmod>2022-08-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
+    <loc>https://night-cruise.github.io/tags/note/</loc>
+    <lastmod>2022-08-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
     <loc>https://night-cruise.github.io/tags/concurrent/</loc>
     <lastmod>2022-08-19</lastmod>
     <changefreq>weekly</changefreq>
@@ -150,21 +164,7 @@
   </url>
   
   <url>
-    <loc>https://night-cruise.github.io/tags/rust/</loc>
-    <lastmod>2022-08-19</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
     <loc>https://night-cruise.github.io/tags/lock-free/</loc>
-    <lastmod>2022-08-19</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://night-cruise.github.io/tags/note/</loc>
     <lastmod>2022-08-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
