@@ -1,3 +1,4 @@
+https://night-cruise.github.io/2022/08/22/Fault-tolerant-Key-Value-Service-2/
 https://night-cruise.github.io/2022/08/19/Fault-tolerant-Key-Value-Service/
 https://night-cruise.github.io/2022/08/06/Raft-4/
 https://night-cruise.github.io/2022/08/08/Raft-5/
