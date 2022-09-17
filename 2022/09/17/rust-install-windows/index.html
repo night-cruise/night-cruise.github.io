@@ -17,31 +17,30 @@
   <meta name="author" content="Night Cruise">
   <meta name="keywords" content="">
   
-    <meta name="description" content="the sharded distributed key&#x2F;value service">
+    <meta name="description" content="the easiest way to install rust on Windows">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Sharded Key&#x2F;Value Service">
-<meta property="og:url" content="https://night-cruise.github.io/2022/09/02/Sharded-Key-Value-Service/index.html">
+<meta property="og:title" content="在 Windows 上安装 Rust">
+<meta property="og:url" content="https://night-cruise.github.io/2022/09/17/rust-install-windows/index.html">
 <meta property="og:site_name" content="阿愁">
-<meta property="og:description" content="the sharded distributed key&#x2F;value service">
+<meta property="og:description" content="the easiest way to install rust on Windows">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://night-cruise.github.io/2022/09/02/Sharded-Key-Value-Service/%E5%9B%BE1.png">
-<meta property="og:image" content="https://night-cruise.github.io/2022/09/02/Sharded-Key-Value-Service/%E5%9B%BE4.png">
-<meta property="og:image" content="https://night-cruise.github.io/2022/09/02/Sharded-Key-Value-Service/%E5%9B%BE3.png">
-<meta property="og:image" content="https://night-cruise.github.io/2022/09/02/Sharded-Key-Value-Service/%E5%9B%BE5.png">
-<meta property="og:image" content="https://night-cruise.github.io/2022/09/02/Sharded-Key-Value-Service/%E5%9B%BE2.png">
-<meta property="article:published_time" content="2022-09-01T16:08:34.000Z">
-<meta property="article:modified_time" content="2022-09-03T12:51:32.243Z">
+<meta property="og:image" content="https://night-cruise.github.io/2022/09/17/rust-install-windows/%E5%9B%BE1.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/09/17/rust-install-windows/%E5%9B%BE2.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/09/17/rust-install-windows/%E5%9B%BE3.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/09/17/rust-install-windows/%E5%9B%BE4.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/09/17/rust-install-windows/%E5%9B%BE5.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/09/17/rust-install-windows/%E5%9B%BE6.png">
+<meta property="article:published_time" content="2022-09-16T16:16:59.000Z">
+<meta property="article:modified_time" content="2022-09-17T11:15:57.959Z">
 <meta property="article:author" content="Night Cruise">
-<meta property="article:tag" content="distributed">
-<meta property="article:tag" content="Fault-tolerant">
-<meta property="article:tag" content="Key&#x2F;Value Service">
-<meta property="article:tag" content="Shard">
+<meta property="article:tag" content="rust">
+<meta property="article:tag" content="windows">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://night-cruise.github.io/2022/09/02/Sharded-Key-Value-Service/%E5%9B%BE1.png">
+<meta name="twitter:image" content="https://night-cruise.github.io/2022/09/17/rust-install-windows/%E5%9B%BE1.png">
   
   
   
-  <title>Sharded Key/Value Service - 阿愁</title>
+  <title>在 Windows 上安装 Rust - 阿愁</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -204,7 +203,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="Sharded Key/Value Service"></span>
+            <span id="subtitle" data-typed-text="在 Windows 上安装 Rust"></span>
           
         </div>
 
@@ -215,8 +214,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2022-09-02 00:08" pubdate>
-          2022年9月2日 凌晨
+        <time datetime="2022-09-17 00:16" pubdate>
+          2022年9月17日 凌晨
         </time>
       </span>
     
@@ -227,7 +226,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          3.8k 字
+          2.1k 字
         
       </span>
     
@@ -238,7 +237,7 @@
         
         
         
-          32 分钟
+          18 分钟
         
       </span>
     
@@ -276,80 +275,56 @@
         <div id="board">
           <article class="post-content mx-auto">
             <!-- SEO header -->
-            <h1 style="display: none">Sharded Key/Value Service</h1>
+            <h1 style="display: none">在 Windows 上安装 Rust</h1>
             
             <div class="markdown-body">
               
-              <p>6.824 的 LAB 4 的内容是构建一个分片的分布式 KV 存储系统。分片是 Key&#x2F;Value 对的子集。例如，所有以 “a” 开头的 Key 可能是一个分片，所有以 “b” 开头的 Key 可能是另一个分片。分片的目的是获取更好的性能，每个副本组只负责几个分片的 puts 和 gets，当访问的分片处于不同的副本组时，这些操作就可以并行地执行。因此，系统的总吞吐量与副本组的数量成正比。</p>
-<p>分片 KV 存储系统包括两个主要组件：</p>
-<ul>
-<li>一组副本组。每个副本组负责分片的一个子集，并由少数使用 Raft 复制分片的服务器组成；</li>
-<li>分片控制器。分片控制器决定一个副本组负责哪些分片，这个信息被称为配置。客户端询问分片控制器找到 Key 对应的副本组，副本组询问分片控制器找到要服务的分片。整个系统有一个单一的分片控制器，使用 Raft    作为容错服务实现。</li>
-</ul>
-<p>LAB 4 实验的主要挑战将是处理重新配置——将分片分配给副本组的更改。在一个副本组中，所有的服务器必须就何时应用新的配置达成一致。例如，Put 可能与重新配置同时到达，导致副本组不再负责对应的 Key。副本组中的服务器必须就 Put 发生在重新配置之前还是之后达成一致。如果之前，Put 应该生效，分片的新所有者应该看到它的效果；如果之后，Put 将不会生效，客户端必须在新所有者处重新尝试。</p>
-<p>重新配置还需要副本组之间的交互。例如，在配置 10 中，副本组 G1 可能负责分片 S1。在配置 11 中，副本组 G2 可能负责分片 S1。在从 10 到 11 的重新配置过程中，G1 和 G2 必须使用 RPC 将分片 S1 从 G1 移动到 G2。</p>
-<h2 id="LAB-4A"><a href="#LAB-4A" class="headerlink" title="LAB 4A"></a>LAB 4A</h2><p>LAB 4A 的内容是实现分片控制器，支持添加新的副本组、清除副本组以及在副本组之间移动分片。LAB 4A 的实现非常简单，除了没有使用快照之外，跟 LAB 3 的实现非常相似。</p>
-<p>需要注意的是，当创建新的配置时，不要把之前的配置的 <code>Groups</code> 赋值给新的配置（因为 <code>Groups</code> 是引用类型），实现完后跑一下测试：</p>
-<img src="/2022/09/02/Sharded-Key-Value-Service/%E5%9B%BE1.png" srcset="/img/loading.gif" lazyload class="">
+              <h2 id="Step1：安装-Windows-terminal"><a href="#Step1：安装-Windows-terminal" class="headerlink" title="Step1：安装 Windows terminal"></a>Step1：安装 Windows terminal</h2><p>打开 Windows 应用商店，搜索 terminal 并选择第一个搜索结果，然后点击下载即可：</p>
+<img src="/2022/09/17/rust-install-windows/%E5%9B%BE1.png" srcset="/img/loading.gif" lazyload class="">
 
 
 
-<h2 id="LAB-4B"><a href="#LAB-4B" class="headerlink" title="LAB 4B"></a>LAB 4B</h2><p>LAB 4B 的内容是实现分片 KV 存储系统，为使用客户端接口的应用程序提供可线性化的接口。也就是说，对 Get、Put 和 Append 方法的完整应用程序调用必须以相同的顺序影响所有副本。 Get 应该看到最近的 Put&#x2F;Append 写入到同一个 Key 的值。即使 Gets 和 Puts 与配置更改几乎同时到达，也必须如此。</p>
-<p>每个 shardkv 服务器都作为副本组的一部分运行。每个副本组为某些分片的 Key 提供 Get、Put 和 Append 操作。</p>
-<h3 id="Hint"><a href="#Hint" class="headerlink" title="Hint"></a>Hint</h3><p>我写完第一版代码后只通过了前面三个测试，第四个测试一直报错 Get 操作返回了错误的值。我反复检查了代码都没找到什么问题，于是就去仔细看了一下实验给的提示，终于发现了问题的所在。</p>
-<p>提示里面给出了非常关键的信息：”Process re-configurations one at a time, in order.”，即应该按照顺序一次处理一个重新配置。在我之前的实现中副本组的 Leader 以100MS的频率向分片控制器询问最新配置，如果配置号大于当前的配置，那么就开始进行分片迁移，在分片迁移完成后进化到新的配置。但这样是有问题的，假设有如下的场景：</p>
-<img src="/2022/09/02/Sharded-Key-Value-Service/%E5%9B%BE4.png" srcset="/img/loading.gif" lazyload class="">
+<h2 id="Step2：安装-Chocolatey"><a href="#Step2：安装-Chocolatey" class="headerlink" title="Step2：安装 Chocolatey"></a>Step2：安装 Chocolatey</h2><p>以管理员的身份打开 Windows terminal，然后输入下面的命令：</p>
+<figure class="highlight pgsql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs pgsql"><span class="hljs-keyword">Set</span>-ExecutionPolicy Bypass -Scope Process -Force; [<span class="hljs-keyword">System</span>.Net.ServicePointManager]::SecurityProtocol = [<span class="hljs-keyword">System</span>.Net.ServicePointManager]::SecurityProtocol -bor <span class="hljs-number">3072</span>; iex ((<span class="hljs-built_in">New</span>-<span class="hljs-keyword">Object</span> <span class="hljs-keyword">System</span>.Net.WebClient).DownloadString(<span class="hljs-string">&#x27;https://community.chocolatey.org/install.ps1&#x27;</span>))<br></code></pre></td></tr></table></figure>
 
-<br>
+<p>安装完成后输入 <code>choco -v</code> 检查版本，如果输出了具体的版本号则表示安装成功。</p>
+<h2 id="Step3：安装-mingw"><a href="#Step3：安装-mingw" class="headerlink" title="Step3：安装 mingw"></a>Step3：安装 mingw</h2><p>以管理员的身份打开 Windows terminal，然后输入下面的命令：</p>
+<figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs cmake">choco <span class="hljs-keyword">install</span> mingw -y<br></code></pre></td></tr></table></figure>
 
-<p>Server 1 和 Server 2 初始状态都是配置1，此时 Server 2 向分片控制器询问最新的配置，分片控制器返回了配置3。Server 2 根据配置3向 Server 1 发送分片2的请求，但是 Server 1 不拥有分片2，于是 Server 1会返回空数据或者无用的垃圾数据，Server 2 会把返回的垃圾数据保存起来，之后如果有客户端向 Server 2 发送 Get 请求，那么 Server 2 就会返回错误的值。</p>
-<p>原因是副本组没有按照顺序处理重新配置，Server 2 不应该跳过配置2直接到达配置3，而是要先到达配置2，再到达配置3。</p>
-<p>但即使这样还需要额外的判断才能保证正确性，假设副本组按照顺序一次处理一个重新配置，有如下的场景：</p>
-<img src="/2022/09/02/Sharded-Key-Value-Service/%E5%9B%BE3.png" srcset="/img/loading.gif" lazyload class="">
-
-<br>
-
-<p>Server 1 初始状态是配置1，Server 2 初始状态是配置2。此时 Server 2 向分片控制器询问最新的配置，分片控制器返回了配置3。Server 2 根据配置3向 Server 1 发送分片2的请求，但是 Server 1 不拥有分片2，于是 Server 1会返回空数据或者无用的垃圾数据，Server 2 会把返回的垃圾数据保存起来，之后如果有客户端向 Server 2 发送 Get 请求，那么 Server 2 就会返回错误的值。</p>
-<p>原因是 Server 2 的配置高于 Server 1，Server 1到达配置2后才会拥有分片2。因此当一个 Server 接收到请求分片的 RPC 时，需要先判断请求分片的配置号是否高于本服务器当前的配置，如果高于则返回一个错误提示告诉对方你要求的分片的配置太高了，否则就可以安全地把分片发送给对方。</p>
-<h3 id="Bug"><a href="#Bug" class="headerlink" title="Bug"></a>Bug</h3><p>再说一说在实现 LAB 4B 的过程中遇到的一个小 Bug。在我的之前的实现中，每当服务器返回一个分片给请求方时，都会直接把这个分片对应的 GID 设置为0，表示不再拥有这个分片：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(kv *ShardKV)</span></span> doShard(command *Op) NotifyMsg &#123;<br>	<span class="hljs-comment">// ....</span><br>    <span class="hljs-comment">// ....</span><br>	<span class="hljs-keyword">for</span> _, shard := <span class="hljs-keyword">range</span> command.Shards &#123;<br>		<span class="hljs-comment">// ....</span><br>        <span class="hljs-comment">// ....</span><br>		kv.config.Shards[shard] = <span class="hljs-number">0</span><br>	&#125;<br><br>	<span class="hljs-keyword">return</span> notifyMsg<br>&#125;<br></code></pre></td></tr></table></figure>
-
-<p>但这样做是有问题的，假设有如下的场景：</p>
-<img src="/2022/09/02/Sharded-Key-Value-Service/%E5%9B%BE5.png" srcset="/img/loading.gif" lazyload class="">
-
-<br>
-
-<p>Server 1 已经到达了配置2，Server 2 到达了配置1。此时 Server 2 向分片控制器询问最新的配置，分片控制器返回了配置2，Server 2 根据配置2向 Server 1 发送分片1的请求，Server 1就把分片1的数据返回给 Server 2，并直接把 <code>kv.config.Shards[1]</code> 设置为0。</p>
-<p>那么问题来了，当 Server 1 想要到达配置 3 时 需要分片1的数据，但是 Server 1已经把 <code>kv.config.Shards[1]</code> 置为0了，因此 Server 1 无法知道现在是谁拥有分片1。</p>
-<p>解决方法很简单，加一个额外的判断即可：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">if</span> kv.config.Shards[shard] == kv.gid &#123;<br>	kv.config.Shards[shard] = <span class="hljs-number">0</span><br>&#125;<br></code></pre></td></tr></table></figure>
-
-<p>如果 Server 1 已经到了配置2，则不把 <code>kv.config.Shards[shard]</code> 设置为0。</p>
-<h3 id="Challenge-1"><a href="#Challenge-1" class="headerlink" title="Challenge 1"></a>Challenge 1</h3><p>挑战1是垃圾状态收集，即当一个副本组失去对分片的所有权时，副本组应该把相应的分片数据删除。</p>
-<p>最简单的办法是，在一个副本组返回分片给请求者后就立马把这个分片的数据删掉。但这样是有问题的，由于网络的不可靠性，请求者可能没有收到返回的分片数据，之后这个请求者就会重试，但此时副本组已经把这个分片删掉了，请求者不可能再拿到这个分片了。</p>
-<p>解决方案是，副本组返回分片给请求者后不立即删掉这个分片。在请求者设置好分片后，再发送消息给分片的原来的持有者：告诉它这个分片我已经拿到了，你可以把这个分片的数据删掉了。这样副本组就能安全地删除掉分片了。</p>
-<p>当然，这里面还有一些细节性的判断，这里就不再赘述了。</p>
-<h3 id="Challenge-2"><a href="#Challenge-2" class="headerlink" title="Challenge 2"></a>Challenge 2</h3><p>挑战2是在配置更改期间能够处理客户端请求：</p>
-<ul>
-<li>在配置更改期间，如果一个分片没有收到影响，那么发送到这个分片的请求能够继续执行；</li>
-<li>在配置更改期间，当副本组收到它需要的一个分片时，这个副本组可以立马为这个分片提供服务。</li>
-</ul>
-<p>第一个问题很简单，只要不在配置更改期间禁用客户端请求就可以通过这个测试。</p>
-<p>对于第二个问题，解决方案是：在副本组得到一个分片后，就创建一个设置分片的操作提交到 Raft 中，当这个操作被复制到多数节点后，就执行这个操作，把分片保存到服务器状态中，之后就可以为这个分片提供服务了。这样就不需要等待到达新的配置就可以为新的分片提供服务了。</p>
-<p>解决完所有的 Bug 并实现两个挑战后，跑一下测试：</p>
-<img src="/2022/09/02/Sharded-Key-Value-Service/%E5%9B%BE2.png" srcset="/img/loading.gif" lazyload class="">
+<p>安装完成后输入 <code>gcc --version</code> 和 <code>g++ --version</code>，如果出现如下的输出则表示安装成功：</p>
+<figure class="highlight mipsasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs mipsasm">PS C:\Users\<span class="hljs-number">25864</span>&gt; gcc --version<br>gcc.exe (MinGW-W64 x86_64-posix-<span class="hljs-keyword">seh, </span><span class="hljs-keyword">built </span><span class="hljs-keyword">by </span><span class="hljs-keyword">Brecht </span>Sanders) <span class="hljs-number">11</span>.<span class="hljs-number">2</span>.<span class="hljs-number">0</span><br>Copyright (C) <span class="hljs-number">2021</span> Free Software Foundation, Inc.<br>This is free software<span class="hljs-comment">; see the source for copying conditions.  There is NO</span><br>warranty<span class="hljs-comment">; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</span><br><br>PS C:\Users\<span class="hljs-number">25864</span>&gt; g++ --version<br>g++.exe (MinGW-W64 x86_64-posix-<span class="hljs-keyword">seh, </span><span class="hljs-keyword">built </span><span class="hljs-keyword">by </span><span class="hljs-keyword">Brecht </span>Sanders) <span class="hljs-number">11</span>.<span class="hljs-number">2</span>.<span class="hljs-number">0</span><br>Copyright (C) <span class="hljs-number">2021</span> Free Software Foundation, Inc.<br>This is free software<span class="hljs-comment">; see the source for copying conditions.  There is NO</span><br>warranty<span class="hljs-comment">; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</span><br></code></pre></td></tr></table></figure>
 
 
 
-<h2 id="难度排序"><a href="#难度排序" class="headerlink" title="难度排序"></a>难度排序</h2><p>终于把 6.824 的所有 LAB 都做完了，结合我自己实现 LAB 的经历给这4个 LAB 的难度做一个排序吧：</p>
-<ol>
-<li>LAB 2。LAB 2 的难度最高，我认为主要是比较难 Debug，测试报错后很多时候都有上万行的日志，除了看日志以外没有什么好的 Debug 方法。我在做 LAB 2A 的时候参考了 Github 上的一个 Raft 的开源实现，主要是看一下需要定义哪些字段和方法，因为我刚开始做的时候完全不知道从哪儿下手😥。然后 2B、2C、2D 都是我完全独立完成的；</li>
-<li>LAB 4。LAB 4 的难度比 LAB 2 的难度低一点，但是远高于 LAB 3 和 LAB 1 的难度。LAB 4A 和 4B 的所有内容都是我自己独立完成的，包括 4B 的最后两个挑战练习。LAB 4 的第一版代码我很快就写完了，但是只能通过前3个测试，直到看到 “Process re-configurations one at a time, in order.” 提示才直到自己哪儿错了，之后只改动几行代码就通过了前面的测试。再之后就慢慢地想要怎么实现最后的两个挑战练习，经过思考后也是顺利地完成了代码；</li>
-<li>LAB 3。LAB 3 的难度本来挺低的，但是我在 LAB 3A 卡了接近一天，原因是我把 LAB 3 的架构搞错了（具体可见之前的文章），我看了一下别人的实现思路后才知道自己竟然犯了这么低级错误，之后改了10来行代码就通过所有测试了ヽ(✿ﾟ▽ﾟ)ノ；</li>
-<li>LAB 1。LAB 1 的难度最低，我感觉 LAB 1 就相当于这门课的热身练习，实现逻辑比较简单，也没有什么复杂的交互，Debug 也比较简单。</li>
-</ol>
+<h2 id="Step4：安装-Rust"><a href="#Step4：安装-Rust" class="headerlink" title="Step4：安装 Rust"></a>Step4：安装 Rust</h2><p>打开 Rust 的官网：<a target="_blank" rel="noopener" href="https://www.rust-lang.org/zh-CN/tools/install">https://www.rust-lang.org/zh-CN/tools/install</a> ，点击下载 RUSTUP-INIT.EXE（64位）：</p>
+<img src="/2022/09/17/rust-install-windows/%E5%9B%BE2.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>打开刚刚下载完的可执行文件：</p>
+<img src="/2022/09/17/rust-install-windows/%E5%9B%BE3.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>选择 3) Don’t install the prerequisites：</p>
+<img src="/2022/09/17/rust-install-windows/%E5%9B%BE4.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>选择 2) Customize installation：</p>
+<img src="/2022/09/17/rust-install-windows/%E5%9B%BE5.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>接下来会输入四个可选项：</p>
+<img src="/2022/09/17/rust-install-windows/%E5%9B%BE6.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>然后输入 1 即可开始安装。</p>
+<h2 id="Step5：验证是否安装成功"><a href="#Step5：验证是否安装成功" class="headerlink" title="Step5：验证是否安装成功"></a>Step5：验证是否安装成功</h2><p>打开 Windows terminal，输入 <code>rustc --version --verbose</code>，如果出现如下输出则表示安装成功：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs rust">PS C:\Users\<span class="hljs-number">25864</span>&gt; rustc --version --verbose<br>rustc <span class="hljs-number">1.65</span>.<span class="hljs-number">0</span>-<span class="hljs-title function_ invoke__">nightly</span> (<span class="hljs-number">95</span>a992a68 <span class="hljs-number">2022</span>-<span class="hljs-number">09</span>-<span class="hljs-number">16</span>)<br>binary: rustc<br>commit-hash: <span class="hljs-number">95</span>a992a68694d8bf3959bd2c0ac27ce9e9208b59<br>commit-date: <span class="hljs-number">2022</span>-<span class="hljs-number">09</span>-<span class="hljs-number">16</span><br>host: x86_64-pc-windows-gnu<br>release: <span class="hljs-number">1.65</span>.<span class="hljs-number">0</span>-nightly<br>LLVM version: <span class="hljs-number">15.0</span>.<span class="hljs-number">0</span><br></code></pre></td></tr></table></figure>
+
+<p>最后通过安装一个 Rust 命令行工具来查看 Cargo 是否正常工作。在 Windows terminal 中输入 <code>cargo install onefetch</code>，如果出现如下输出则表示 Cargo 能够正常工作：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs rust"> ......<br> ......<br> Compiling ansi_term v0.<span class="hljs-number">12.1</span><br> Compiling owo-colors v3.<span class="hljs-number">5.0</span><br> Compiling zstd v0.<span class="hljs-number">11.2</span>+zstd.<span class="hljs-number">1.5</span>.<span class="hljs-number">2</span><br> Compiling askalono v0.<span class="hljs-number">4.6</span><br> Compiling git2 v0.<span class="hljs-number">14.4</span><br> Compiling onefetch v2.<span class="hljs-number">12.0</span><br>  Finished release [optimized] <span class="hljs-title function_ invoke__">target</span>(s) <span class="hljs-keyword">in</span> <span class="hljs-number">5</span>m <span class="hljs-number">59</span>s<br>Installing C:\Users\<span class="hljs-number">25864</span>\.cargo\bin\onefetch.exe<br> Installed package `onefetch v2.<span class="hljs-number">12.0</span>` (executable `onefetch.exe`)<br></code></pre></td></tr></table></figure>
+
+
+
+
+
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
-<li><a target="_blank" rel="noopener" href="https://pdos.csail.mit.edu/6.824/">MIT 6.824</a></li>
+<li><a target="_blank" rel="noopener" href="https://chocolatey.org/install#individual">https://chocolatey.org/install#individual</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.rust-lang.org/zh-CN/tools/install">https://www.rust-lang.org/zh-CN/tools/install</a></li>
 </ul>
 
               
@@ -368,7 +343,7 @@
     
       <span class="category-chain">
         
-  <a href="/categories/distributed-system/" class="category-chain-item">distributed system</a>
+  <a href="/categories/rust/" class="category-chain-item">rust</a>
   
   
 
@@ -383,13 +358,9 @@
     <div class="post-meta">
       <i class="iconfont icon-tags"></i>
       
-        <a href="/tags/distributed/">#distributed</a>
+        <a href="/tags/rust/">#rust</a>
       
-        <a href="/tags/Fault-tolerant/">#Fault-tolerant</a>
-      
-        <a href="/tags/Key-Value-Service/">#Key/Value Service</a>
-      
-        <a href="/tags/Shard/">#Shard</a>
+        <a href="/tags/windows/">#windows</a>
       
     </div>
   
@@ -401,8 +372,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>Sharded Key/Value Service</div>
-      <div>https://night-cruise.github.io/2022/09/02/Sharded-Key-Value-Service/</div>
+      <div>在 Windows 上安装 Rust</div>
+      <div>https://night-cruise.github.io/2022/09/17/rust-install-windows/</div>
     </div>
     <div class="license-meta">
       
@@ -414,7 +385,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2022年9月2日</div>
+          <div>2022年9月17日</div>
         </div>
       
       
@@ -444,18 +415,12 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2022/09/17/rust-install-windows/" title="在 Windows 上安装 Rust">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">在 Windows 上安装 Rust</span>
-                        <span class="visible-mobile">上一篇</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2022/08/22/Fault-tolerant-Key-Value-Service-2/" title="Fault-tolerant Key/Value Service（二）">
-                        <span class="hidden-mobile">Fault-tolerant Key/Value Service（二）</span>
+                      <a href="/2022/09/02/Sharded-Key-Value-Service/" title="Sharded Key/Value Service">
+                        <span class="hidden-mobile">Sharded Key/Value Service</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
