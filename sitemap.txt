@@ -1,3 +1,4 @@
+https://night-cruise.github.io/2022/11/19/cacher-blog/
 https://night-cruise.github.io/2022/09/17/rust-install-windows/
 https://night-cruise.github.io/2022/09/02/Sharded-Key-Value-Service/
 https://night-cruise.github.io/about/index.html
