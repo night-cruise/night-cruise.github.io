@@ -259,11 +259,4 @@
     <priority>0.2</priority>
   </url>
   
-  <url>
-    <loc>https://night-cruise.github.io/categories/concurrent/rust/</loc>
-    <lastmod>2022-11-27</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
 </urlset>

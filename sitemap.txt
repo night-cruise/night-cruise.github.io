@@ -30,4 +30,3 @@ https://night-cruise.github.io/tags/relaxed-memory/
 https://night-cruise.github.io/categories/distributed-system/
 https://night-cruise.github.io/categories/rust/
 https://night-cruise.github.io/categories/concurrent/
-https://night-cruise.github.io/categories/concurrent/rust/
