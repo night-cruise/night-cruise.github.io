@@ -1,3 +1,4 @@
+https://night-cruise.github.io/2022/11/27/relaxed-memory-concurrency/
 https://night-cruise.github.io/2022/11/19/cacher-blog/
 https://night-cruise.github.io/2022/09/17/rust-install-windows/
 https://night-cruise.github.io/2022/09/02/Sharded-Key-Value-Service/
@@ -25,6 +26,8 @@ https://night-cruise.github.io/tags/parallel/
 https://night-cruise.github.io/tags/lock-free/
 https://night-cruise.github.io/tags/Shard/
 https://night-cruise.github.io/tags/windows/
+https://night-cruise.github.io/tags/relaxed-memory/
 https://night-cruise.github.io/categories/distributed-system/
 https://night-cruise.github.io/categories/rust/
 https://night-cruise.github.io/categories/concurrent/
+https://night-cruise.github.io/categories/concurrent/rust/
