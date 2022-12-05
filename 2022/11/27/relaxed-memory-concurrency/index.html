@@ -79,8 +79,10 @@
 <meta property="og:image" content="https://night-cruise.github.io/2022/11/27/relaxed-memory-concurrency/spin-lock-7.png">
 <meta property="og:image" content="https://night-cruise.github.io/2022/11/27/relaxed-memory-concurrency/spin-lock-8.png">
 <meta property="og:image" content="https://night-cruise.github.io/2022/11/27/relaxed-memory-concurrency/spin-lock-9.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/11/27/relaxed-memory-concurrency/ticket-lock.png">
+<meta property="og:image" content="https://night-cruise.github.io/2022/11/27/relaxed-memory-concurrency/clh-lock.png">
 <meta property="article:published_time" content="2022-11-27T15:43:53.000Z">
-<meta property="article:modified_time" content="2022-11-27T17:50:58.620Z">
+<meta property="article:modified_time" content="2022-12-05T17:11:12.783Z">
 <meta property="article:author" content="Night Cruise">
 <meta property="article:tag" content="consistency">
 <meta property="article:tag" content="rust">
@@ -279,7 +281,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          13k 字
+          18k 字
         
       </span>
     
@@ -290,7 +292,7 @@
         
         
         
-          111 分钟
+          149 分钟
         
       </span>
     
@@ -616,8 +618,8 @@
 <li><strong>Views:</strong> modeling coherence and synchronization</li>
 <li><strong>Promises:</strong> modeling store hoisting</li>
 </ul>
-<h2 id="examples"><a href="#examples" class="headerlink" title="examples"></a>examples</h2><h3 id="Spin-lock"><a href="#Spin-lock" class="headerlink" title="Spin lock"></a>Spin lock</h3><p>Spin lock 代码：<a target="_blank" rel="noopener" href="https://github.com/kaist-cp/cs431/blob/main/src/lock/spinlock.rs%E3%80%82">https://github.com/kaist-cp/cs431/blob/main/src/lock/spinlock.rs。</a> 关键方法：</p>
-<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">pub</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">lock</span>(&amp;<span class="hljs-keyword">self</span>) &#123; <br>    <span class="hljs-keyword">while</span> <span class="hljs-keyword">self</span>.inner.<span class="hljs-title function_ invoke__">cas</span>(<span class="hljs-literal">false</span>, <span class="hljs-literal">true</span>, acquire).<span class="hljs-title function_ invoke__">is_err</span>() &#123;&#125; <br>&#125;<br><span class="hljs-keyword">pub</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">unlock</span>(&amp;<span class="hljs-keyword">self</span>) &#123; <br>    <span class="hljs-keyword">self</span>.inner.<span class="hljs-title function_ invoke__">store</span>(<span class="hljs-literal">false</span>, release);            <br>&#125;<br></code></pre></td></tr></table></figure>
+<h2 id="examples"><a href="#examples" class="headerlink" title="examples"></a>examples</h2><h3 id="Spin-lock"><a href="#Spin-lock" class="headerlink" title="Spin lock"></a>Spin lock</h3><p>Spin lock 代码：<a target="_blank" rel="noopener" href="https://github.com/kaist-cp/cs431/blob/main/src/lock/spinlock.rs">https://github.com/kaist-cp/cs431/blob/main/src/lock/spinlock.rs</a>。 关键方法：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">fn</span> <span class="hljs-title function_">lock</span>(&amp;<span class="hljs-keyword">self</span>) &#123; <br>    <span class="hljs-keyword">while</span> <span class="hljs-keyword">self</span>.inner.<span class="hljs-title function_ invoke__">cas</span>(<span class="hljs-literal">false</span>, <span class="hljs-literal">true</span>, acquire).<span class="hljs-title function_ invoke__">is_err</span>() &#123;&#125; <br>&#125;<br><span class="hljs-keyword">fn</span> <span class="hljs-title function_">unlock</span>(&amp;<span class="hljs-keyword">self</span>) &#123; <br>    <span class="hljs-keyword">self</span>.inner.<span class="hljs-title function_ invoke__">store</span>(<span class="hljs-literal">false</span>, release);            <br>&#125;<br></code></pre></td></tr></table></figure>
 
 <p>Lock Guarantee：</p>
 <ul>
@@ -653,8 +655,38 @@
 <img src="/2022/11/27/relaxed-memory-concurrency/spin-lock-9.png" srcset="/img/loading.gif" lazyload class="">
 
 <p>综上所述，线程1和线程2持有锁的 timestamp 区间不相交，因此多个线程不会同时读写锁保护的数据，并且当一个线程持有锁时，另一个线程尝试获取锁则会进入自旋。此外，通过 Release&#x2F;Acquire 实现了 message passing，保证当一个线程持有锁时，访问到的是最新的数据。</p>
-<h3 id="Ticket-lock"><a href="#Ticket-lock" class="headerlink" title="Ticket lock"></a>Ticket lock</h3><p>待定。。。。。。</p>
-<h3 id="CLH-lock"><a href="#CLH-lock" class="headerlink" title="CLH lock"></a>CLH lock</h3><p>待定。。。。。</p>
+<h3 id="Ticket-lock"><a href="#Ticket-lock" class="headerlink" title="Ticket lock"></a>Ticket lock</h3><p>Ticket lock 代码：<a target="_blank" rel="noopener" href="https://github.com/kaist-cp/cs431/blob/main/src/lock/ticketlock.rs">https://github.com/kaist-cp/cs431/blob/main/src/lock/ticketlock.rs</a>。关键方法：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">fn</span> <span class="hljs-title function_">lock</span>(&amp;<span class="hljs-keyword">self</span>) <span class="hljs-punctuation">-&gt;</span> <span class="hljs-type">usize</span> &#123;<br>    <span class="hljs-keyword">let</span> <span class="hljs-variable">ticket</span> = <span class="hljs-keyword">self</span>.next.<span class="hljs-title function_ invoke__">fetch_add</span>(<span class="hljs-number">1</span>, Ordering::Relaxed);<br><br>    <span class="hljs-keyword">while</span> <span class="hljs-keyword">self</span>.curr.<span class="hljs-title function_ invoke__">load</span>(Ordering::Acquire) != ticket &#123;&#125;<br><br>    ticket<br>&#125;<br><br><span class="hljs-keyword">fn</span> <span class="hljs-title function_">unlock</span>(&amp;<span class="hljs-keyword">self</span>, ticket: <span class="hljs-type">usize</span>) &#123;<br>    <span class="hljs-keyword">self</span>.curr.<span class="hljs-title function_ invoke__">store</span>(ticket.<span class="hljs-title function_ invoke__">wrapping_add</span>(<span class="hljs-number">1</span>), Ordering::Release);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<img src="/2022/11/27/relaxed-memory-concurrency/ticket-lock.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>D 表示被锁保护的数据，绿色线条表示线程1，蓝色线条表示线程2。初始状态下，线程1的 view 为 next &#x3D; 0 &amp; cur &#x3D; 0 &amp; D &#x3D; D0，线程的 view 为 next &#x3D; 0 &amp; cur &#x3D; 0 &amp; D &#x3D; D0。执行流程描述如下：</p>
+<ul>
+<li>线程1执行 <code>self.next.fetch_add(1)</code>，读取 next &#x3D; 0 message，邻接 next &#x3D; 1 message，获取 ticket &#x3D; 0。接着执行 <code>self.curr.load</code>，读取 cur &#x3D; 0 message，因为 cur &#x3D; ticket &#x3D; 0，因此结束循环，返回 ticket，线程1的视图最终变为 next &#x3D; 1 &amp; cur &#x3D; 0 &amp; D &#x3D; D0；</li>
+<li>线程2执行 <code>self.next.fetch_add(1)</code>，读取 next &#x3D; 1 message，邻接 next &#x3D; 2 message，获取 ticket &#x3D; 1。接着执行 <code>self.curr.load</code>，读取 cur &#x3D; 0 message，因为 cur !&#x3D; ticket，因此开始自旋，线程2的视图更新为 next &#x3D; 2 &amp; cur &#x3D; 0 &amp; D &#x3D; D0；</li>
+<li>线程1修改 D，插入 D &#x3D; D1 message，线程1的视图更新为 next &#x3D; 1 &amp; cur &#x3D; 0 &amp; D &#x3D; D1；</li>
+<li>线程1释放锁，执行 <code>self.curr.store(ticket.wrapping_add(1), Release)</code> ，插入 cur &#x3D; 1 message，线程1的视图更新为 next &#x3D; 1 &amp; cur &#x3D; 1 &amp; D &#x3D; D1。因为使用了 Release，生成 message view：next &#x3D; 1 &amp; cur &#x3D; 1 &amp; D &#x3D; D1；</li>
+<li>线程2执行 <code>self.curr.load(Ordering::Acquire)</code> ，假设读到 cur &#x3D; 1 message，此时 cur &#x3D; ticket &#x3D; 1，因此结束循环，返回 ticket，线程2的视图更新为 next &#x3D; 2 &amp; cur &#x3D; 1 &amp; D &#x3D; D0。因为使用了 Acquire，把 message view 合并到线程2的view中，线程2的视图变为 next &#x3D; 2 &amp; cur &#x3D; 1 &amp; D &#x3D; D1；</li>
+<li>线程2修改 D，插入 D &#x3D; D2 message，线程2的视图更新为 next &#x3D; 2 &amp; cur &#x3D; 1 &amp; D &#x3D; D2；</li>
+<li>线程2释放锁，执行 <code>self.curr.store(ticket.wrapping_add(1), Release)</code> ，插入 cur &#x3D; 2 message，线程2的视图更新为 next &#x3D; 2 &amp; cur &#x3D; 2 &amp; D &#x3D; D2。因为使用了 Release，生成 message view：next &#x3D; 2 &amp; cur &#x3D; 2 &amp; D &#x3D; D2。</li>
+</ul>
+<p>综上所述，线程1和线程2持有锁的 timestamp 区间不相交，当一个线程持有锁时，另一个线程尝试获取锁会进入自旋。此外，通过 Release&#x2F;Acquire 实现了 message passing，保证当一个线程持有锁时，访问到的是最新的数据。</p>
+<h3 id="Clh-lock"><a href="#Clh-lock" class="headerlink" title="Clh lock"></a>Clh lock</h3><p>Clh lock 代码：<a target="_blank" rel="noopener" href="https://github.com/kaist-cp/cs431/blob/main/src/lock/clhlock.rs">https://github.com/kaist-cp/cs431/blob/main/src/lock/clhlock.rs</a>。关键方法：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">fn</span> <span class="hljs-title function_">lock</span>(&amp;<span class="hljs-keyword">self</span>) <span class="hljs-punctuation">-&gt;</span> <span class="hljs-keyword">Self</span>::Token &#123;<br>    <span class="hljs-keyword">let</span> <span class="hljs-variable">node</span> = Box::<span class="hljs-title function_ invoke__">into_raw</span>(Box::<span class="hljs-title function_ invoke__">new</span>(CachePadded::<span class="hljs-title function_ invoke__">new</span>(Node::<span class="hljs-title function_ invoke__">new</span>(<span class="hljs-literal">true</span>))));<br>    <span class="hljs-keyword">let</span> <span class="hljs-variable">prev</span> = <span class="hljs-keyword">self</span>.tail.<span class="hljs-title function_ invoke__">swap</span>(node, Ordering::AcqRel);<br><br>    <span class="hljs-keyword">while</span> <span class="hljs-keyword">unsafe</span> &#123; (*prev).locked.<span class="hljs-title function_ invoke__">load</span>(Ordering::Acquire) &#125; &#123;&#125;<br><br>    <span class="hljs-title function_ invoke__">drop</span>(<span class="hljs-keyword">unsafe</span> &#123; Box::<span class="hljs-title function_ invoke__">from_raw</span>(prev) &#125;);<br>    <span class="hljs-title function_ invoke__">Token</span>(node)<br>&#125;<br><br><span class="hljs-keyword">fn</span> <span class="hljs-title function_">unlock</span>(&amp;<span class="hljs-keyword">self</span>, token: <span class="hljs-keyword">Self</span>::Token) &#123;<br>    (*token.<span class="hljs-number">0</span>).locked.<span class="hljs-title function_ invoke__">store</span>(<span class="hljs-literal">false</span>, Ordering::Release);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<img src="/2022/11/27/relaxed-memory-concurrency/clh-lock.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>D 表示被锁保护的数据，绿色线条表示线程1，蓝色线条表示线程2。初始状态下，线程1的 view 为 tail &#x3D; t0 &amp; node0 &#x3D; F &amp; D &#x3D; D0，线程2的 view 为 tail &#x3D; t0 &amp; node0 &#x3D; F &amp; D &#x3D; D0。执行流程描述如下：</p>
+<ul>
+<li>线程1调用lock函数，创建 node1，插入 node1 &#x3D; T message。线程1执行 <code>self.tail.swap(node1, AcqRel)</code>，读取 tail &#x3D; t0 message，邻接 tail &#x3D; t1 message，线程1的视图更新为 tail &#x3D; t1 &amp; node0 &#x3D; F &amp; node1 &#x3D; T &amp; D &#x3D; D0。由于使用了 AcqReq，生成 tail &#x3D; t1 的message view：tail &#x3D; t1 &amp; node0 &#x3D; F &amp; node1 &#x3D; T &amp; D &#x3D; D0。线程1执行 <code>(*node0).locked.load(Ordering::Acquire)</code>，读取 node0 &#x3D; F message，退出 while 循环。线程1执行 <code>drop(unsafe &#123; Box::from_raw(node0) &#125;)</code>，此时 node0 不会再有线程方法它，因此可以把 node0 相关的 message 从线程视图中删除，线程1 view 更新为 tail &#x3D; t1 &amp; node1 &#x3D; T &amp; D &#x3D; D0， tail &#x3D; t1 的message view    更新为 tail &#x3D; t1 &amp; node1 &#x3D; T &amp; D &#x3D; D0。线程1 返回 Token(node1)，此时线程1成功获取锁；</li>
+<li>线程2调用lock函数，创建node2，插入 node2 &#x3D; T message。线程2执行 <code>self.tail.swap(node2, AcqRel)</code>，读取 tail &#x3D; t1 message，邻接 tail &#x3D; t2 message，由于使用使用了 AcqRel，因此将 tail &#x3D; t1 message view合并到线程2的视图中，线程2的视图更新为 tail &#x3D; t2 &amp; node1 &#x3D; T &amp; node2 &#x3D; T &amp; D &#x3D; D0，同时生成 tail &#x3D; t2 message view：tail &#x3D; t2 &amp; node1 &#x3D; T &amp; node2 &#x3D; T &amp; D &#x3D; D0。线程2执行 <code>(*node1).locked.load(Ordering::Acquire)</code>，读取 node1 &#x3D; T message，进入自旋；</li>
+<li>线程1修改 D，插入 D &#x3D; D1 message，线程1的视图更新为 tail &#x3D; t1 &amp; node1 &#x3D; T &amp; D &#x3D; D1；</li>
+<li>线程1释放锁，执行 <code>(*node1).locked.store(false, Release);</code> ，插入 node1 &#x3D; F message，线程1的视图更新为 tail &#x3D; t1 &amp; node1 &#x3D; F &amp; D &#x3D; D1。因为使用了 Release，生成 node1 &#x3D; F message view：tail &#x3D; t1 &amp; node1 &#x3D; F &amp; D &#x3D; D1；</li>
+<li>线程2执行 <code>(*node1).locked.load(Ordering::Acquire)</code>，假设读到 node1 &#x3D; F message，则退出循环，由于使用了 Acquire，将 node1 &#x3D; F message view 合并线程2的 view中，线程2的视图更新为 tail &#x3D; t2 &amp; node1 &#x3D; F &amp; node2 &#x3D; T &amp; D &#x3D; D1。线程2执行 <code>drop(unsafe &#123; Box::from_raw(node1) &#125;)</code>，此时 node1 不会再有线程方法它，因此可以把 node1 相关的 message 从线程视图中删除，线程2 view 更新为 tail &#x3D; t2 &amp; node2 &#x3D; T &amp; D &#x3D; D1， tail &#x3D; t2 的message view    更新为 tail &#x3D; t2 &amp; node2 &#x3D; T &amp; D &#x3D; D1。线程2 返回 Token(node2)，此时线程2成功获取锁；</li>
+<li>线程2修改 D，插入 D &#x3D; D2 message，线程2的视图更新为  tail &#x3D; t2 &amp; node2 &#x3D; T &amp; D &#x3D; D2；</li>
+<li>线程2释放锁，执行 <code>(*node2).locked.store(false, Release);</code> ，插入 node2 &#x3D; F message，线程2的视图更新为 tail &#x3D; t2 &amp; node2 &#x3D; F &amp; D &#x3D; D2。因为使用了 Release，生成 node2 &#x3D; F message view：tail &#x3D; t2 &amp; node2 &#x3D; F &amp; D &#x3D; D2。</li>
+</ul>
+<p>综上所述，线程1和线程2持有锁的 timestamp 区间不相交，当一个线程持有锁时，另一个线程尝试获取锁会进入自旋。此外，通过 Release&#x2F;Acquire 实现了 message passing，保证当一个线程持有锁时，访问到的是最新的数据。</p>
 
               
             </div>
