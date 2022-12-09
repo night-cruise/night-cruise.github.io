@@ -11,7 +11,6 @@ https://night-cruise.github.io/2022/07/31/Raft-3/
 https://night-cruise.github.io/2022/07/25/Raft-2/
 https://night-cruise.github.io/2022/07/24/Raft-1/
 https://night-cruise.github.io/2022/05/22/drop-check/
-https://night-cruise.github.io/2022/05/22/lock-free-hashtable/
 https://night-cruise.github.io/2022/05/22/hello-world/
 https://night-cruise.github.io/
 https://night-cruise.github.io/tags/distributed/
@@ -22,7 +21,6 @@ https://night-cruise.github.io/tags/paper/
 https://night-cruise.github.io/tags/rust/
 https://night-cruise.github.io/tags/note/
 https://night-cruise.github.io/tags/concurrent/
-https://night-cruise.github.io/tags/parallel/
 https://night-cruise.github.io/tags/lock-free/
 https://night-cruise.github.io/tags/Shard/
 https://night-cruise.github.io/tags/windows/
