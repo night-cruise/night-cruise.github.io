@@ -181,6 +181,13 @@
   </url>
   
   <url>
+    <loc>https://night-cruise.github.io/tags/Shard/</loc>
+    <lastmod>2023-01-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
     <loc>https://night-cruise.github.io/tags/rust/</loc>
     <lastmod>2023-01-08</lastmod>
     <changefreq>weekly</changefreq>
@@ -189,13 +196,6 @@
   
   <url>
     <loc>https://night-cruise.github.io/tags/note/</loc>
-    <lastmod>2023-01-08</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://night-cruise.github.io/tags/Shard/</loc>
     <lastmod>2023-01-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
@@ -216,6 +216,13 @@
   </url>
   
   <url>
+    <loc>https://night-cruise.github.io/tags/relaxed-memory/</loc>
+    <lastmod>2023-01-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  
+  <url>
     <loc>https://night-cruise.github.io/tags/memory-reclamation/</loc>
     <lastmod>2023-01-08</lastmod>
     <changefreq>weekly</changefreq>
@@ -224,13 +231,6 @@
   
   <url>
     <loc>https://night-cruise.github.io/tags/translation/</loc>
-    <lastmod>2023-01-08</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
-  <url>
-    <loc>https://night-cruise.github.io/tags/relaxed-memory/</loc>
     <lastmod>2023-01-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>

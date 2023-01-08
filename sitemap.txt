@@ -19,14 +19,14 @@ https://night-cruise.github.io/tags/Fault-tolerant/
 https://night-cruise.github.io/tags/Key-Value-Service/
 https://night-cruise.github.io/tags/consistency/
 https://night-cruise.github.io/tags/paper/
+https://night-cruise.github.io/tags/Shard/
 https://night-cruise.github.io/tags/rust/
 https://night-cruise.github.io/tags/note/
-https://night-cruise.github.io/tags/Shard/
 https://night-cruise.github.io/tags/lock-free/
 https://night-cruise.github.io/tags/concurrent/
+https://night-cruise.github.io/tags/relaxed-memory/
 https://night-cruise.github.io/tags/memory-reclamation/
 https://night-cruise.github.io/tags/translation/
-https://night-cruise.github.io/tags/relaxed-memory/
 https://night-cruise.github.io/tags/windows/
 https://night-cruise.github.io/categories/distributed-system/
 https://night-cruise.github.io/categories/rust/
