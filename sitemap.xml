@@ -139,7 +139,7 @@
 
   <url>
     <loc>https://night-cruise.github.io/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -147,98 +147,98 @@
   
   <url>
     <loc>https://night-cruise.github.io/tags/distributed/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/Fault-tolerant/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/Key-Value-Service/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/consistency/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/paper/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/Shard/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/rust/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/note/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/lock-free/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/concurrent/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/memory-reclamation/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/translation/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/relaxed-memory/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/windows/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
@@ -247,21 +247,21 @@
   
   <url>
     <loc>https://night-cruise.github.io/categories/distributed-system/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/categories/rust/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/categories/concurrent/</loc>
-    <lastmod>2023-01-10</lastmod>
+    <lastmod>2023-01-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
