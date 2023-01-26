@@ -1,3 +1,4 @@
+https://night-cruise.github.io/2023/01/26/epoch%EF%BC%88%E4%B8%80%EF%BC%89/
 https://night-cruise.github.io/2023/01/12/lock-free-hash-table/
 https://night-cruise.github.io/2023/01/08/hazard-pointers/
 https://night-cruise.github.io/2022/11/27/relaxed-memory-concurrency/
@@ -23,13 +24,15 @@ https://night-cruise.github.io/tags/paper/
 https://night-cruise.github.io/tags/Shard/
 https://night-cruise.github.io/tags/rust/
 https://night-cruise.github.io/tags/note/
+https://night-cruise.github.io/tags/gc/
 https://night-cruise.github.io/tags/lock-free/
 https://night-cruise.github.io/tags/concurrent/
+https://night-cruise.github.io/tags/relaxed-memory/
 https://night-cruise.github.io/tags/memory-reclamation/
 https://night-cruise.github.io/tags/translation/
 https://night-cruise.github.io/tags/hash-table/
-https://night-cruise.github.io/tags/relaxed-memory/
 https://night-cruise.github.io/tags/windows/
 https://night-cruise.github.io/categories/distributed-system/
 https://night-cruise.github.io/categories/rust/
+https://night-cruise.github.io/categories/gc/
 https://night-cruise.github.io/categories/concurrent/

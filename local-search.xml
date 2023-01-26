@@ -4,6 +4,41 @@
   
   
   <entry>
+    <title>crossbeam-epoch（一）</title>
+    <link href="/2023/01/26/epoch%EF%BC%88%E4%B8%80%EF%BC%89/"/>
+    <url>/2023/01/26/epoch%EF%BC%88%E4%B8%80%EF%BC%89/</url>
+    
+    <content type="html"><![CDATA[<p>crossbeam-epoch 源码仓库：<a href="https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-epoch">https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-epoch</a></p><p>epoch 算法的原理和 crossbeam-epoch 的 api 设计：<a href="http://aturon.github.io/tech/2015/08/27/epoch/">http://aturon.github.io/tech/2015/08/27/epoch/</a></p><h2 id="crossbeam-epoch"><a href="#crossbeam-epoch" class="headerlink" title="crossbeam-epoch"></a>crossbeam-epoch</h2><p>crossbeam-epoch 的大概实现思路如下所示：</p><img src="/2023/01/26/epoch%EF%BC%88%E4%B8%80%EF%BC%89/epoch-gc.png" class=""><p>当启动一个线程时，会调用 Collector 相关的 api 注册一个 handle，这会在 Collector 的 lock-free Local 链表中插入一个 Local，最终返回一个 LocalHandle 保存在线程本地中。</p><p>当在一个线程中想要访问 lock-free 数据结构中的节点时，就调用 LocalHandle 上的 pin 方法，这会递增相应的 Local 中的 pin_count 和 guard_count 值，将 epoch 更新为全局的 epoch 值，最终返回一个 guard，guard 的内部其实就是一个指向 Local 指针。</p><p>当在一个线程中想要回收 lock-free 数据结构中的节点时，就调用 guard 的 defer_destroy 方法并传入指向回收节点的指针，这会把回收该节点的闭包&#x2F;函数包装成一个 Deferred 类型，并将其 push 到 Local 的 Bag 中。</p><p>当 Local 中的 Bag 已满或者主动调用 guard 的 flush 方法，则会把 bag 和当前的全局 epoch 值一起打包成 SealedBag，并将其 push 到 Collector 的 lock-free 队列中。</p><p>当 Local 中的 pin count 达到阈值或者主动调用 guard 的 flush 方法，则会触发一次垃圾回收，这会尝试递增全局 epoch，如果所有 pin 住的线程都处于同一个 epoch，则递增成功，反之递增失败。之后会不断的从队列里面 pop 出 SealedBag，如果 SealedBag 的 epoch 与全局 epoch 相差两个 epoch 及以上，则 SealedBag 可以回收，否则停止 pop。</p>]]></content>
+    
+    
+    <categories>
+      
+      <category>gc</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>rust</tag>
+      
+      <tag>note</tag>
+      
+      <tag>gc</tag>
+      
+      <tag>lock-free</tag>
+      
+      <tag>concurrent</tag>
+      
+      <tag>relaxed memory</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>Split-Ordered Lists</title>
     <link href="/2023/01/12/lock-free-hash-table/"/>
     <url>/2023/01/12/lock-free-hash-table/</url>
