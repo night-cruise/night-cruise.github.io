@@ -1,0 +1,729 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta name="google-site-verification" content="NutVL4Scy7H0J8keF3k0QjqlIRLdXafMMiMg6ZhF5CQ" />
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Night Cruise">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="The Atomic module in corssbeam-epoch">
+<meta property="og:type" content="article">
+<meta property="og:title" content="crossbeam-epoch（二）：Atomic">
+<meta property="og:url" content="https://night-cruise.github.io/2023/01/27/epoch%EF%BC%88%E4%BA%8C%EF%BC%89%EF%BC%9AAtomic/index.html">
+<meta property="og:site_name" content="阿愁">
+<meta property="og:description" content="The Atomic module in corssbeam-epoch">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://night-cruise.github.io/2023/01/27/epoch%EF%BC%88%E4%BA%8C%EF%BC%89%EF%BC%9AAtomic/align.png">
+<meta property="article:published_time" content="2023-01-27T12:00:20.000Z">
+<meta property="article:modified_time" content="2023-01-27T16:43:41.456Z">
+<meta property="article:author" content="Night Cruise">
+<meta property="article:tag" content="rust">
+<meta property="article:tag" content="note">
+<meta property="article:tag" content="gc">
+<meta property="article:tag" content="lock-free">
+<meta property="article:tag" content="concurrent">
+<meta property="article:tag" content="relaxed memory">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://night-cruise.github.io/2023/01/27/epoch%EF%BC%88%E4%BA%8C%EF%BC%89%EF%BC%9AAtomic/align.png">
+  
+  
+  
+  <title>crossbeam-epoch（二）：Atomic - 阿愁</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"night-cruise.github.io","root":"/","version":"1.9.0","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>阿愁</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="crossbeam-epoch（二）：Atomic"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-01-27 20:00" pubdate>
+          2023年1月27日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          73 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">crossbeam-epoch（二）：Atomic</h1>
+            
+            <div class="markdown-body">
+              
+              <h2 id="pointer-align-and-tag"><a href="#pointer-align-and-tag" class="headerlink" title="pointer align and tag"></a>pointer align and tag</h2><p>Atomic 内部包装了一个 AtomicPtr，为了支持 tag 功能，这个指针必须是对齐的。例如，我们有一个 <code>*const i32</code> 指针 <code>ptr</code>。在 Rust 中，<code>i32</code> 类型按照 4 个字节进行对齐：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">fn</span> <span class="hljs-title function_">main</span>() &#123;<br>    <span class="hljs-built_in">println!</span>(<span class="hljs-string">&quot;&#123;&#125;&quot;</span>, std::mem::align_of::&lt;<span class="hljs-type">i32</span>&gt;());    <span class="hljs-comment">// 4</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p> 如果 <code>ptr</code> 是对齐的，那么<code>ptr</code> 必然是 4 的倍数，那么 <code>ptr</code> 的最低的两个比特位必然等于0：</p>
+<img src="/2023/01/27/epoch%EF%BC%88%E4%BA%8C%EF%BC%89%EF%BC%9AAtomic/align.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>所以我们可以使用对齐指针的最低的 <code> mem::align_of::&lt;T&gt;().trailing_zeros()</code> 个比特位存储 tag。</p>
+<p>为了方便起见，把 <code>ptr</code> 指针用来表示对齐的比特位称为 “对齐位”。</p>
+<p>crossbeam-epoch 中判断指针是否对齐和实现 tag 的方法：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-comment">/// Returns a bitmask containing the unused least significant bits of an aligned pointer to `T`.</span><br><span class="hljs-meta">#[inline]</span><br><span class="hljs-keyword">fn</span> <span class="hljs-title function_">low_bits</span>&lt;T: ?<span class="hljs-built_in">Sized</span> + Pointable&gt;() <span class="hljs-punctuation">-&gt;</span> <span class="hljs-type">usize</span> &#123;<br>    (<span class="hljs-number">1</span> &lt;&lt; T::ALIGN.<span class="hljs-title function_ invoke__">trailing_zeros</span>()) - <span class="hljs-number">1</span><br>&#125;<br><br><span class="hljs-comment">/// Panics if the pointer is not properly unaligned.</span><br><span class="hljs-meta">#[inline]</span><br><span class="hljs-keyword">fn</span> <span class="hljs-title function_">ensure_aligned</span>&lt;T: ?<span class="hljs-built_in">Sized</span> + Pointable&gt;(raw: *<span class="hljs-title function_ invoke__">mut</span> ()) &#123;<br>    <span class="hljs-built_in">assert_eq!</span>(raw <span class="hljs-keyword">as</span> <span class="hljs-type">usize</span> &amp; low_bits::&lt;T&gt;(), <span class="hljs-number">0</span>, <span class="hljs-string">&quot;unaligned pointer&quot;</span>);<br>&#125;<br><br><span class="hljs-comment">/// Given a tagged pointer `data`, returns the same pointer, but tagged with `tag`.</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// `tag` is truncated to fit into the unused bits of the pointer to `T`.</span><br><span class="hljs-meta">#[inline]</span><br><span class="hljs-keyword">fn</span> <span class="hljs-title function_">compose_tag</span>&lt;T: ?<span class="hljs-built_in">Sized</span> + Pointable&gt;(ptr: *<span class="hljs-title function_ invoke__">mut</span> (), tag: <span class="hljs-type">usize</span>) <span class="hljs-punctuation">-&gt;</span> *<span class="hljs-title function_ invoke__">mut</span> () &#123;<br>    (ptr <span class="hljs-keyword">as</span> <span class="hljs-type">usize</span> &amp; !low_bits::&lt;T&gt;()) | (tag &amp; low_bits::&lt;T&gt;())<br>&#125;<br><br><span class="hljs-comment">/// Decomposes a tagged pointer `data` into the pointer and the tag.</span><br><span class="hljs-meta">#[inline]</span><br><span class="hljs-keyword">fn</span> <span class="hljs-title function_">decompose_tag</span>&lt;T: ?<span class="hljs-built_in">Sized</span> + Pointable&gt;(ptr: *<span class="hljs-title function_ invoke__">mut</span> ()) <span class="hljs-punctuation">-&gt;</span> (*<span class="hljs-title function_ invoke__">mut</span> (), <span class="hljs-type">usize</span>) &#123;<br>    (ptr <span class="hljs-keyword">as</span> <span class="hljs-type">usize</span> &amp; !low_bits::&lt;T&gt;(), ptr <span class="hljs-keyword">as</span> <span class="hljs-type">usize</span> &amp; low_bits::&lt;T&gt;())<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>low_bits</code> 函数返回一个位掩码，用来表示指向类型 <code>T</code> 的对齐指针的对齐位。例如 <code>low_bits::&lt;i32&gt;()</code> 会返回 b011，表示有两个比特位没有使用，这两个比特位就可以存储 tag。</p>
+<p><code>ensure_aligned</code> 函数判断 <code>raw</code>(不带 tag) 指针是否对齐，它将 <code>low_bits::&lt;T&gt;()</code> 的结果与 <code>raw</code> 做与运算，如果等于0，则说明 <code>raw</code> 指针是对齐的，反之说明没有对齐。</p>
+<p><code>compose_tag</code> 函数将 <code>tag</code> 保存到 <code>ptr</code> 指针中，通过 <code>ptr as usize &amp; !low_bits::&lt;T&gt;()</code> 将 <code>ptr</code> 的对齐位清零。通过<code>tag &amp; low_bits::&lt;T&gt;()</code> 把 <code>tag</code> 写到对齐位中，如果 <code>tag</code> 过大，则会被截断，因为 <code>low_bits::&lt;T&gt;()</code> 返回的结果除了对齐位其他的比特位都为0。将上述的两个位运算的结果再做一个或运算，就可以把 <code>tag</code> 写到 <code>ptr</code> 的对齐位中了。</p>
+<p><code>decompose_tag</code> 函数将 <code>ptr</code> 指针拆分成没有 tag 的 <code>raw</code> 指针和 <code>tag</code> 值。内部的操作与 <code>compose_tag</code> 类似。</p>
+<h2 id="Pointable-trait"><a href="#Pointable-trait" class="headerlink" title="Pointable trait"></a>Pointable trait</h2><p>crossbeam-epoch 将由 single-word 指针指向的类型抽象成了一个 <code>Pointable</code> trait，其定义如下：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">pub</span> <span class="hljs-keyword">trait</span> <span class="hljs-title class_">Pointable</span> &#123;<br>    <span class="hljs-comment">/// The alignment of pointer.</span><br>    <span class="hljs-keyword">const</span> ALIGN: <span class="hljs-type">usize</span>;<br><br>    <span class="hljs-comment">/// The type for initializers.</span><br>    <span class="hljs-keyword">type</span> <span class="hljs-title class_">Init</span>;<br><br>    <span class="hljs-comment">/// Initializes a with the given initializer.</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// # Safety</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// The result should be a multiple of `ALIGN`.</span><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">init</span>(init: <span class="hljs-keyword">Self</span>::Init) <span class="hljs-punctuation">-&gt;</span> *<span class="hljs-title function_ invoke__">mut</span> ();<br><br>    <span class="hljs-comment">/// Dereferences the given pointer.</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// # Safety</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// - The given `ptr` should have been initialized with [`Pointable::init`].</span><br>    <span class="hljs-comment">/// - `ptr` should not have yet been dropped by [`Pointable::drop`].</span><br>    <span class="hljs-comment">/// - `ptr` should not be mutably dereferenced by [`Pointable::deref_mut`] concurrently.</span><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">deref</span>&lt;<span class="hljs-symbol">&#x27;a</span>&gt;(ptr: *<span class="hljs-title function_ invoke__">mut</span> ()) <span class="hljs-punctuation">-&gt;</span> &amp;<span class="hljs-symbol">&#x27;a</span> <span class="hljs-keyword">Self</span>;<br><br>    <span class="hljs-comment">/// Mutably dereferences the given pointer.</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// # Safety</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// - The given `ptr` should have been initialized with [`Pointable::init`].</span><br>    <span class="hljs-comment">/// - `ptr` should not have yet been dropped by [`Pointable::drop`].</span><br>    <span class="hljs-comment">/// - `ptr` should not be dereferenced by [`Pointable::deref`] or [`Pointable::deref_mut`]</span><br>    <span class="hljs-comment">///   concurrently.</span><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">deref_mut</span>&lt;<span class="hljs-symbol">&#x27;a</span>&gt;(ptr: *<span class="hljs-title function_ invoke__">mut</span> ()) <span class="hljs-punctuation">-&gt;</span> &amp;<span class="hljs-symbol">&#x27;a</span> <span class="hljs-keyword">mut</span> <span class="hljs-keyword">Self</span>;<br><br>    <span class="hljs-comment">/// Drops the object pointed to by the given pointer.</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// # Safety</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// - The given `ptr` should have been initialized with [`Pointable::init`].</span><br>    <span class="hljs-comment">/// - `ptr` should not have yet been dropped by [`Pointable::drop`].</span><br>    <span class="hljs-comment">/// - `ptr` should not be dereferenced by [`Pointable::deref`] or [`Pointable::deref_mut`]</span><br>    <span class="hljs-comment">///   concurrently.</span><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">drop</span>(ptr: *<span class="hljs-title function_ invoke__">mut</span> ());<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>在并发编程中，需要使用 single-word 指针来表示一个对象，因为原子操作（例如 read, write, read-modify-write）只支持 single-word。<code>Pointable</code> trait 就表示被 single-word 指针指向的类型，提供了初始化&#x2F;解引用&#x2F;析构操作的定义。</p>
+<p>crossbeam-epoch 为 sized 类型 <code>T</code> 实现了 <code>Pointable</code> trait：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">impl</span>&lt;T&gt; Pointable <span class="hljs-keyword">for</span> <span class="hljs-title class_">T</span> &#123;<br>    <span class="hljs-keyword">const</span> ALIGN: <span class="hljs-type">usize</span> = mem::align_of::&lt;T&gt;();<br><br>    <span class="hljs-keyword">type</span> <span class="hljs-title class_">Init</span> = T;<br><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">init</span>(init: <span class="hljs-keyword">Self</span>::Init) <span class="hljs-punctuation">-&gt;</span> *<span class="hljs-title function_ invoke__">mut</span> () &#123;<br>        Box::<span class="hljs-title function_ invoke__">into_raw</span>(Box::<span class="hljs-title function_ invoke__">new</span>(init)).cast::&lt;()&gt;()<br>    &#125;<br><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">deref</span>&lt;<span class="hljs-symbol">&#x27;a</span>&gt;(ptr: *<span class="hljs-title function_ invoke__">mut</span> ()) <span class="hljs-punctuation">-&gt;</span> &amp;<span class="hljs-symbol">&#x27;a</span> <span class="hljs-keyword">Self</span> &#123;<br>        &amp;*(ptr <span class="hljs-keyword">as</span> *<span class="hljs-keyword">const</span> T)<br>    &#125;<br><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">deref_mut</span>&lt;<span class="hljs-symbol">&#x27;a</span>&gt;(ptr: *<span class="hljs-title function_ invoke__">mut</span> ()) <span class="hljs-punctuation">-&gt;</span> &amp;<span class="hljs-symbol">&#x27;a</span> <span class="hljs-keyword">mut</span> <span class="hljs-keyword">Self</span> &#123;<br>        &amp;<span class="hljs-keyword">mut</span> *ptr.cast::&lt;T&gt;()<br>    &#125;<br><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">drop</span>(ptr: *<span class="hljs-title function_ invoke__">mut</span> ()) &#123;<br>        <span class="hljs-title function_ invoke__">drop</span>(Box::<span class="hljs-title function_ invoke__">from_raw</span>(ptr.cast::&lt;T&gt;()));<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>Pointable</code> trait 为 sized 类型 <code>T</code> 生成了一个 <code>Box&lt;T&gt;</code>。<code>Box::new</code> 在堆上为类型 <code>T</code> 分配内存，并返回一个 single-word 指针。对于 sized <code>T</code>，<code>Box&lt;T&gt;</code> 的大小都等于 single-word，例如 <code>Box&lt;i32&gt;</code>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">fn</span> <span class="hljs-title function_">main</span>() &#123;<br>    <span class="hljs-built_in">println!</span>(<span class="hljs-string">&quot;&#123;&#125;&quot;</span>, std::mem::size_of::&lt;<span class="hljs-type">Box</span>&lt;<span class="hljs-type">i32</span>&gt;&gt;());    <span class="hljs-comment">// 8</span><br>&#125;   <br></code></pre></td></tr></table></figure>
+
+<p>但是对于动态大小类型 unsized <code>T</code>，<code>Box&lt;T&gt;</code> 就是一个胖指针了，因为需要保存长度信息。例如 <code>Box&lt;[MaybeUninit&lt;u32&gt;]&gt;</code>：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">use</span> core::mem::MaybeUninit;<br><br><span class="hljs-keyword">fn</span> <span class="hljs-title function_">main</span>() &#123;<br>    <span class="hljs-built_in">println!</span>(<span class="hljs-string">&quot;&#123;&#125;&quot;</span>, std::mem::size_of::&lt;<span class="hljs-type">Box</span>&lt;[MaybeUninit&lt;<span class="hljs-type">u32</span>&gt;]&gt;&gt;());    <span class="hljs-comment">// 16</span><br>&#125;   <br></code></pre></td></tr></table></figure>
+
+<p>为了支持动态大小类型 <code>[MaybeUninit&lt;T&gt;]</code>，就不能使用 <code>Box</code>，必须单独为 <code>[MaybeUninit&lt;T&gt;]</code> 实现 <code>Pointable</code> trait：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-comment">/// Array with size.</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// # Memory layout</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// An array consisting of size and elements:</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// ```text</span><br><span class="hljs-comment">///          elements</span><br><span class="hljs-comment">///          |</span><br><span class="hljs-comment">///          |</span><br><span class="hljs-comment">/// ------------------------------------</span><br><span class="hljs-comment">/// | size | 0 | 1 | 2 | 3 | 4 | 5 | 6 |</span><br><span class="hljs-comment">/// ------------------------------------</span><br><span class="hljs-comment">/// ```</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// Its memory layout is different from that of `Box&lt;[T]&gt;` in that size is in the allocation (not</span><br><span class="hljs-comment">/// along with pointer as in `Box&lt;[T]&gt;`).</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// Elements are not present in the type, but they will be in the allocation.</span><br><span class="hljs-comment">/// ```</span><br><span class="hljs-meta">#[repr(C)]</span><br><span class="hljs-keyword">struct</span> <span class="hljs-title class_">Array</span>&lt;T&gt; &#123;<br>    <span class="hljs-comment">/// The number of elements (not the number of bytes).</span><br>    len: <span class="hljs-type">usize</span>,<br>    elements: [MaybeUninit&lt;T&gt;; <span class="hljs-number">0</span>],<br>&#125;<br><br><span class="hljs-keyword">impl</span>&lt;T&gt; Pointable <span class="hljs-keyword">for</span> [MaybeUninit&lt;T&gt;] &#123;<br>    <span class="hljs-keyword">const</span> ALIGN: <span class="hljs-type">usize</span> = mem::align_of::&lt;Array&lt;T&gt;&gt;();<br><br>    <span class="hljs-keyword">type</span> <span class="hljs-title class_">Init</span> = <span class="hljs-type">usize</span>;<br><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">init</span>(len: <span class="hljs-keyword">Self</span>::Init) <span class="hljs-punctuation">-&gt;</span> *<span class="hljs-title function_ invoke__">mut</span> () &#123;<br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">size</span> = mem::size_of::&lt;Array&lt;T&gt;&gt;() + mem::size_of::&lt;MaybeUninit&lt;T&gt;&gt;() * len;<br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">align</span> = mem::align_of::&lt;Array&lt;T&gt;&gt;();<br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">layout</span> = alloc::Layout::<span class="hljs-title function_ invoke__">from_size_align</span>(size, align).<span class="hljs-title function_ invoke__">unwrap</span>();<br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">ptr</span> = alloc::<span class="hljs-title function_ invoke__">alloc</span>(layout).cast::&lt;Array&lt;T&gt;&gt;();<br>        <span class="hljs-keyword">if</span> ptr.<span class="hljs-title function_ invoke__">is_null</span>() &#123;<br>            alloc::<span class="hljs-title function_ invoke__">handle_alloc_error</span>(layout);<br>        &#125;<br>        (*ptr).len = len;<br>        ptr.cast::&lt;()&gt;()<br>    &#125;<br><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">deref</span>&lt;<span class="hljs-symbol">&#x27;a</span>&gt;(ptr: *<span class="hljs-title function_ invoke__">mut</span> ()) <span class="hljs-punctuation">-&gt;</span> &amp;<span class="hljs-symbol">&#x27;a</span> <span class="hljs-keyword">Self</span> &#123;<br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">array</span> = &amp;*(ptr <span class="hljs-keyword">as</span> *<span class="hljs-keyword">const</span> Array&lt;T&gt;);<br>        slice::<span class="hljs-title function_ invoke__">from_raw_parts</span>(array.elements.<span class="hljs-title function_ invoke__">as_ptr</span>(), array.len)<br>    &#125;<br><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">deref_mut</span>&lt;<span class="hljs-symbol">&#x27;a</span>&gt;(ptr: *<span class="hljs-title function_ invoke__">mut</span> ()) <span class="hljs-punctuation">-&gt;</span> &amp;<span class="hljs-symbol">&#x27;a</span> <span class="hljs-keyword">mut</span> <span class="hljs-keyword">Self</span> &#123;<br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">array</span> = &amp;<span class="hljs-keyword">mut</span> *ptr.cast::&lt;Array&lt;T&gt;&gt;();<br>        slice::<span class="hljs-title function_ invoke__">from_raw_parts_mut</span>(array.elements.<span class="hljs-title function_ invoke__">as_mut_ptr</span>(), array.len)<br>    &#125;<br><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">drop</span>(ptr: *<span class="hljs-title function_ invoke__">mut</span> ()) &#123;<br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">array</span> = &amp;*ptr.cast::&lt;Array&lt;T&gt;&gt;();<br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">size</span> = mem::size_of::&lt;Array&lt;T&gt;&gt;() + mem::size_of::&lt;MaybeUninit&lt;T&gt;&gt;() * array.len;<br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">align</span> = mem::align_of::&lt;Array&lt;T&gt;&gt;();<br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">layout</span> = alloc::Layout::<span class="hljs-title function_ invoke__">from_size_align</span>(size, align).<span class="hljs-title function_ invoke__">unwrap</span>();<br>        alloc::<span class="hljs-title function_ invoke__">dealloc</span>(ptr.cast::&lt;<span class="hljs-type">u8</span>&gt;(), layout);<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>与 <code>Box&lt;[T]&gt;</code> 不同的是，<code>Array&lt;T&gt;</code> 的内存布局把切片的长度信息和切片元素保存在一起。在 <code>Pointable</code> 的实现中，使用更为底层的 alloc 在堆上分配内存，并返回指向 <code>Array&lt;T&gt;</code> 的指针，因为不需要附加长度信息，所以指针的大小等于 single-word，这样就满足了 <code>Pointable</code> 的要求。</p>
+<p>总的来说，我认为定义 <code>Pointable</code> trait 的目的是统一 sized&#x2F;unsized 类型的接口。这样的话，我们为类型 <code>T</code> 进行初始化&#x2F;解引用&#x2F;析构操作时，就不需要区分 <code>T</code> 是否是动态大小类型，而只需要使用 <code>Pointable</code> 中定义好的接口即可。</p>
+<h2 id="Atomic"><a href="#Atomic" class="headerlink" title="Atomic"></a>Atomic</h2><p>在上篇文章中，我们讲到当想要访问无锁数据结构中的节点时，需要先调用 <code>pin</code> 方法创建一个 <code>guard</code>。在 <code>guard</code> 的生命周期内，访问就是安全的。</p>
+<p>但是，crossbeam-epoch 的 api 设计更加严格，它把 AtomicPtr 包装成了 Atomic 类型，如果要在 Atomic 上执行原子操作就必须传入 <code>&amp;guard</code>，这样就能强制用户事先创建好 <code>guard</code> 再执行操作，避免出现 use-after-free 的问题。</p>
+<p><code>Atomic</code>、<code>Owned</code>、<code>Shared</code> 的定义如下：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-comment">/// An atomic pointer that can be safely shared between threads.</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// The pointer must be properly aligned. Since it is aligned, a tag can be stored into the unused</span><br><span class="hljs-comment">/// least significant bits of the address. For example, the tag for a pointer to a sized type `T`</span><br><span class="hljs-comment">/// should be less than `(1 &lt;&lt; mem::align_of::&lt;T&gt;().trailing_zeros())`.</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// Any method that loads the pointer must be passed a reference to a [`Guard`].</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// Crossbeam supports dynamically sized types.  See [`Pointable`] for details.</span><br><span class="hljs-keyword">pub</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">Atomic</span>&lt;T: ?<span class="hljs-built_in">Sized</span> + Pointable&gt; &#123;<br>    data: AtomicPtr&lt;()&gt;,<br>    _marker: PhantomData&lt;*<span class="hljs-keyword">mut</span> T&gt;,<br>&#125;<br><br><span class="hljs-comment">/// An owned heap-allocated object.</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// This type is very similar to `Box&lt;T&gt;`.</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// The pointer must be properly aligned. Since it is aligned, a tag can be stored into the unused</span><br><span class="hljs-comment">/// least significant bits of the address.</span><br><span class="hljs-keyword">pub</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">Owned</span>&lt;T: ?<span class="hljs-built_in">Sized</span> + Pointable&gt; &#123;<br>    data: *<span class="hljs-title function_ invoke__">mut</span> (),<br>    _marker: PhantomData&lt;<span class="hljs-type">Box</span>&lt;T&gt;&gt;,<br>&#125;<br><br><span class="hljs-comment">/// A pointer to an object protected by the epoch GC.</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// The pointer is valid for use only during the lifetime `&#x27;g`.</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// The pointer must be properly aligned. Since it is aligned, a tag can be stored into the unused</span><br><span class="hljs-comment">/// least significant bits of the address.</span><br><span class="hljs-keyword">pub</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">Shared</span>&lt;<span class="hljs-symbol">&#x27;g</span>, T: <span class="hljs-symbol">&#x27;g</span> + ?<span class="hljs-built_in">Sized</span> + Pointable&gt; &#123;<br>    data: *<span class="hljs-title function_ invoke__">mut</span> (),<br>    _marker: PhantomData&lt;(&amp;<span class="hljs-symbol">&#x27;g</span> (), *<span class="hljs-keyword">const</span> T)&gt;,<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p><code>Atomic&lt;T&gt;</code> 和标准库提供的 <code>AtomicPtr&lt;T&gt;</code> 类似，都是可以在多线程之间安全共享的指针类型。<code>Atomic&lt;T&gt;</code> 中实现了很多原子操作方法，例如 <code>load</code>、<code>store</code>、<code>compare_exchange</code>、<code>fetch_add</code> 等，底层基本都调用了 <code>AtomicPtr&lt;T&gt;</code> 中的同名方法。</p>
+<p><code>Owned&lt;T&gt;</code> 表示拥有所有权的指针类型，类似于 <code>Box&lt;T&gt;</code>，都是在堆上为 <code>T</code> 分配内存。当 <code>Owned&lt;T&gt;</code> 离开作用域时，就会释放之前分配的内存。</p>
+<p><code>Shared&lt;T&gt;</code> 类似于 <code>&amp;T</code>，表示没有所有权的指针类型。它是被 epoch gc 保护的指针，例如调用 <code>Atomic&lt;T&gt;</code> 的 <code>load</code> 方法时就会返回 <code>Shared&lt;T&gt;</code>，并附加生命周期 <code>&#39;g</code>。<code>&#39;g</code> 应该小于等于 <code>guard</code> 的生命周期，因此在 <code>guard</code> 的生命周期内，线程都是被 “pin” 住的，<code>Shared&lt;T&gt;</code> 被 epoch gc 保护，它指向的节点不会被其他线程回收，因此解引用 <code>Shared&lt;T&gt;</code> 指针就是安全的。</p>
+<p>除此之外，crossbeam-epoch 中还实现了一些 <code>Atomic&lt;T&gt;</code>、<code>Owned&lt;T&gt;</code>、<code>Shared&lt;T&gt;</code> 之间的互相转换操作。</p>
+
+              
+            </div>
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/gc/" class="category-chain-item">gc</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/rust/">#rust</a>
+      
+        <a href="/tags/note/">#note</a>
+      
+        <a href="/tags/gc/">#gc</a>
+      
+        <a href="/tags/lock-free/">#lock-free</a>
+      
+        <a href="/tags/concurrent/">#concurrent</a>
+      
+        <a href="/tags/relaxed-memory/">#relaxed memory</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>crossbeam-epoch（二）：Atomic</div>
+      <div>https://night-cruise.github.io/2023/01/27/epoch（二）：Atomic/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Night Cruise</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年1月27日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/01/26/epoch%EF%BC%88%E4%B8%80%EF%BC%89/" title="crossbeam-epoch（一）">
+                        <span class="hidden-mobile">crossbeam-epoch（一）</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.0/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

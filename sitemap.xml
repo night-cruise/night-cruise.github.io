@@ -2,6 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://night-cruise.github.io/2023/01/27/epoch%EF%BC%88%E4%BA%8C%EF%BC%89%EF%BC%9AAtomic/</loc>
+    
+    <lastmod>2023-01-27</lastmod>
+    
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://night-cruise.github.io/2023/01/26/epoch%EF%BC%88%E4%B8%80%EF%BC%89/</loc>
     
     <lastmod>2023-01-26</lastmod>
@@ -157,7 +166,7 @@
 
   <url>
     <loc>https://night-cruise.github.io/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -165,112 +174,112 @@
   
   <url>
     <loc>https://night-cruise.github.io/tags/distributed/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/Fault-tolerant/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/Key-Value-Service/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/consistency/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/paper/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/Shard/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/rust/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/note/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/gc/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/lock-free/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/concurrent/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/relaxed-memory/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/memory-reclamation/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/translation/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/hash-table/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/tags/windows/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
@@ -279,28 +288,28 @@
   
   <url>
     <loc>https://night-cruise.github.io/categories/distributed-system/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/categories/rust/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/categories/gc/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
   
   <url>
     <loc>https://night-cruise.github.io/categories/concurrent/</loc>
-    <lastmod>2023-01-26</lastmod>
+    <lastmod>2023-01-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.2</priority>
   </url>
