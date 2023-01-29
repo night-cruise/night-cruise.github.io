@@ -1,0 +1,745 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta name="google-site-verification" content="NutVL4Scy7H0J8keF3k0QjqlIRLdXafMMiMg6ZhF5CQ" />
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Night Cruise">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="The intrusive lock-free linked list in crossbeam-epoch">
+<meta property="og:type" content="article">
+<meta property="og:title" content="crossbeam-epoch（三）：侵入式无锁链表">
+<meta property="og:url" content="https://night-cruise.github.io/2023/01/28/epoch%EF%BC%88%E4%B8%89%EF%BC%89/index.html">
+<meta property="og:site_name" content="阿愁">
+<meta property="og:description" content="The intrusive lock-free linked list in crossbeam-epoch">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://night-cruise.github.io/2023/01/28/epoch%EF%BC%88%E4%B8%89%EF%BC%89/list.png">
+<meta property="og:image" content="https://night-cruise.github.io/2023/01/28/epoch%EF%BC%88%E4%B8%89%EF%BC%89/list-2.png">
+<meta property="og:image" content="https://night-cruise.github.io/2023/01/28/epoch%EF%BC%88%E4%B8%89%EF%BC%89/list-3.png">
+<meta property="og:image" content="https://night-cruise.github.io/2023/01/28/epoch%EF%BC%88%E4%B8%89%EF%BC%89/list-4.png">
+<meta property="og:image" content="https://night-cruise.github.io/2023/01/28/epoch%EF%BC%88%E4%B8%89%EF%BC%89/list-5.png">
+<meta property="article:published_time" content="2023-01-28T12:07:33.000Z">
+<meta property="article:modified_time" content="2023-01-29T14:08:07.621Z">
+<meta property="article:author" content="Night Cruise">
+<meta property="article:tag" content="rust">
+<meta property="article:tag" content="note">
+<meta property="article:tag" content="gc">
+<meta property="article:tag" content="lock-free">
+<meta property="article:tag" content="concurrent">
+<meta property="article:tag" content="relaxed memory">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://night-cruise.github.io/2023/01/28/epoch%EF%BC%88%E4%B8%89%EF%BC%89/list.png">
+  
+  
+  
+  <title>crossbeam-epoch（三）：侵入式无锁链表 - 阿愁</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"night-cruise.github.io","root":"/","version":"1.9.0","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>阿愁</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="crossbeam-epoch（三）：侵入式无锁链表"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-01-28 20:07" pubdate>
+          2023年1月28日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          7.4k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          62 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">crossbeam-epoch（三）：侵入式无锁链表</h1>
+            
+            <div class="markdown-body">
+              
+              <p>crossbeam-epoch 中使用侵入式无锁链表来组织所有线程的 Local：<a target="_blank" rel="noopener" href="https://github.com/crossbeam-rs/crossbeam/blob/master/crossbeam-epoch/src/sync/list.rs">https://github.com/crossbeam-rs/crossbeam/blob/master/crossbeam-epoch/src/sync/list.rs</a></p>
+<h2 id="侵入式链表"><a href="#侵入式链表" class="headerlink" title="侵入式链表"></a>侵入式链表</h2><p>侵入式链表的内存布局如下：</p>
+<img src="/2023/01/28/epoch%EF%BC%88%E4%B8%89%EF%BC%89/list.png" srcset="/img/loading.gif" lazyload class="">
+
+<p><code>Node</code> 是业务数据节点，由使用者来定义，<code>Node</code> 中必须包含一个 <code>entry</code>，每个 <code>entry</code> 中都保存指向下一个节点的 <code>entry</code> 的指针，这样才能把所有的节点串联起来构成一个单链表。</p>
+<p>显而易见，侵入式链表与非侵入式链表主要有两个不同点：</p>
+<ul>
+<li>侵入式链表的节点 <code>Node</code> 由使用者来定义，而非侵入式链表由实现者来定义；</li>
+<li>侵入式链表的节点 <code>Node</code> 中的字段 <code>entry</code> 保存指向下一个节点的 <code>entry</code> 的指针，以此来串联所有的节点。而非侵入式链表中通过 <code>next</code> 指针指向下一个 <code>Node</code> 节点来串联形成链表。</li>
+</ul>
+<p>例如，一个典型的非侵入式链表的内存布局如下所示：</p>
+<img src="/2023/01/28/epoch%EF%BC%88%E4%B8%89%EF%BC%89/list-2.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>使用侵入式链表的一个显而易见的好处是不需要维护泛型参数，降低实现的复杂度。由于侵入式链表的节点由使用者定义，那么就可以在节点中任意增加字段：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">struct</span> <span class="hljs-title class_">Node</span> &#123;<br>	entry: Entry,<br>	<br>	filed1: <span class="hljs-type">i32</span>,<br>	filed2: <span class="hljs-type">String</span>,<br>	filed3: <span class="hljs-type">usize</span>,<br>	.....<br>	.....<br>&#125;<br></code></pre></td></tr></table></figure>
+<p>而非侵入式链表则不行，链表的结点由实现者定义，实现者不可能预先知道使用者需要哪些类型的字段，因此只能使用泛型参数，而使用者就必须把需要的类型打包成一个单独的类型，然后才能使用链表：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">struct</span> <span class="hljs-title class_">Node</span>&lt;T&gt; &#123;<br>	data: T,<br>	next: *<span class="hljs-keyword">mut</span> Node,<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>crossbeam-epoch 中非侵入链表的定义如下：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-comment">/// An entry in a linked list.</span><br><span class="hljs-comment">///</span><br><span class="hljs-comment">/// An Entry is accessed from multiple threads, so it would be beneficial to put it in a different</span><br><span class="hljs-comment">/// cache-line than thread-local data in terms of performance.</span><br><span class="hljs-meta">#[derive(Debug)]</span><br><span class="hljs-title function_ invoke__">pub</span>(<span class="hljs-keyword">crate</span>) <span class="hljs-keyword">struct</span> <span class="hljs-title class_">Entry</span> &#123;<br>    <span class="hljs-comment">/// The next entry in the linked list.</span><br>    <span class="hljs-comment">/// If the tag is 1, this entry is marked as deleted.</span><br>    next: Atomic&lt;Entry&gt;,<br>&#125;<br><br><span class="hljs-comment">/// A lock-free, intrusive linked list of type `T`.</span><br><span class="hljs-meta">#[derive(Debug)]</span><br><span class="hljs-title function_ invoke__">pub</span>(<span class="hljs-keyword">crate</span>) <span class="hljs-keyword">struct</span> <span class="hljs-title class_">List</span>&lt;T, C: IsElement&lt;T&gt; = T&gt; &#123;<br>    <span class="hljs-comment">/// The head of the linked list.</span><br>    head: Atomic&lt;Entry&gt;,<br><br>    <span class="hljs-comment">/// The phantom data for using `T` and `C`.</span><br>    _marker: PhantomData&lt;(T, C)&gt;,<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="IsElement-trait"><a href="#IsElement-trait" class="headerlink" title="IsElement trait"></a>IsElement trait</h2><p>在侵入式链表中，可以通过节点中的 <code>entry</code> 找到下一个节点的 <code>entry</code>，但是要如何通过 <code>entry</code> 访问完整的节点呢？假设节点的定义如下：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-meta">#[repr(c)]</span><br><span class="hljs-keyword">struct</span> <span class="hljs-title class_">Node</span> &#123;<br>	counter: <span class="hljs-type">usize</span>,<br>	entry: Entry,<br>	key: <span class="hljs-type">i32</span>,<br>	value: <span class="hljs-type">i32</span>,<br>&#125;<br></code></pre></td></tr></table></figure>
+<p>内存布局：</p>
+<img src="/2023/01/28/epoch%EF%BC%88%E4%B8%89%EF%BC%89/list-3.png" srcset="/img/loading.gif" lazyload class="">
+
+<p>假设存在引用 <code>&amp;Entry</code>，那么可以通过减去 <code>entry</code> 在 <code>Node</code> 中的地址偏移量得到 <code>Node</code> 的指针：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs rust">(&amp;Entry <span class="hljs-keyword">as</span> <span class="hljs-type">usize</span> - offset_of!(A, entry)) <span class="hljs-keyword">as</span> *<span class="hljs-keyword">const</span> Node<br></code></pre></td></tr></table></figure>
+<p>同样的，如果存在引用 <code>&amp;Node</code>，也可以通过加上 <code>entry</code> 在 <code>Node</code> 中的地址偏移量得到 <code>Entry</code> 指针：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs rust">(&amp;Node <span class="hljs-keyword">as</span> <span class="hljs-type">usize</span> + offset_of!(A, entry)) <span class="hljs-keyword">as</span> *<span class="hljs-keyword">const</span> Entry<br></code></pre></td></tr></table></figure>
+
+<p>为了统一上述的 <code>entry</code> 和 <code>Node</code> 转换操作，crossbeam-epoch 定义了 <code>IsElement&lt;T&gt;</code> trait：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-comment">/// Implementing this trait asserts that the type `T` can be used as an element in the intrusive</span><br><span class="hljs-comment">/// linked list defined in this module. `T` has to contain (or otherwise be linked to) an instance</span><br><span class="hljs-comment">/// of `Entry`.</span><br><span class="hljs-title function_ invoke__">pub</span>(<span class="hljs-keyword">crate</span>) <span class="hljs-keyword">trait</span> <span class="hljs-title class_">IsElement</span>&lt;T&gt; &#123;<br>    <span class="hljs-comment">/// Returns a reference to this element&#x27;s `Entry`.</span><br>    <span class="hljs-keyword">fn</span> <span class="hljs-title function_">entry_of</span>(_: &amp;T) <span class="hljs-punctuation">-&gt;</span> &amp;Entry;<br><br>    <span class="hljs-comment">/// Given a reference to an element&#x27;s entry, returns that element.</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// ```ignore</span><br>    <span class="hljs-comment">/// let elem = ListElement::new();</span><br>    <span class="hljs-comment">/// assert_eq!(elem.entry_of(),</span><br>    <span class="hljs-comment">///            unsafe &#123; ListElement::element_of(elem.entry_of()) &#125; );</span><br>    <span class="hljs-comment">/// ```</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// # Safety</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// The caller has to guarantee that the `Entry` is called with was retrieved from an instance</span><br>    <span class="hljs-comment">/// of the element type (`T`).</span><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">element_of</span>(_: &amp;Entry) <span class="hljs-punctuation">-&gt;</span> &amp;T;<br><br>    <span class="hljs-comment">/// The function that is called when an entry is unlinked from list.</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// # Safety</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// The caller has to guarantee that the `Entry` is called with was retrieved from an instance</span><br>    <span class="hljs-comment">/// of the element type (`T`).</span><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">finalize</span>(_: &amp;Entry, _: &amp;Guard);<br>&#125;<br></code></pre></td></tr></table></figure>
+<p><code>entry_of</code> 和 <code>element_of</code> 定义了侵入式链表中 <code>&amp;Node</code> 和 <code>&amp;Entry</code> 之间的互相转换接口。<code>finalize</code> 定义了回收链表中节点的接口。</p>
+<p>使用示例：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">struct</span> <span class="hljs-title class_">A</span> &#123;<br>	entry: Entry,<br>    data: <span class="hljs-type">usize</span>,<br>&#125;<br><br><span class="hljs-keyword">impl</span> <span class="hljs-title class_">IsElement</span>&lt;A&gt; <span class="hljs-keyword">for</span> <span class="hljs-title class_">A</span> &#123;<br>    <span class="hljs-keyword">fn</span> <span class="hljs-title function_">entry_of</span>(a: &amp;A) <span class="hljs-punctuation">-&gt;</span> &amp;Entry &#123;<br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">entry_ptr</span> = ((a <span class="hljs-keyword">as</span> <span class="hljs-type">usize</span>) + offset_of!(A, entry)) <span class="hljs-keyword">as</span> *<span class="hljs-keyword">const</span> Entry;<br>        <span class="hljs-keyword">unsafe</span> &#123; &amp;*entry_ptr &#125;<br>    &#125;<br><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">element_of</span>(entry: &amp;Entry) <span class="hljs-punctuation">-&gt;</span> &amp;T &#123;<br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">elem_ptr</span> = ((entry <span class="hljs-keyword">as</span> <span class="hljs-type">usize</span>) - offset_of!(A, entry)) <span class="hljs-keyword">as</span> *<span class="hljs-keyword">const</span> T;<br>        &amp;*elem_ptr<br>    &#125;<br><br>    <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">finalize</span>(entry: &amp;Entry, guard: &amp;Guard) &#123;<br>        guard.<span class="hljs-title function_ invoke__">defer_destroy</span>(Shared::<span class="hljs-title function_ invoke__">from</span>(<span class="hljs-keyword">Self</span>::<span class="hljs-title function_ invoke__">element_of</span>(entry) <span class="hljs-keyword">as</span> *<span class="hljs-keyword">const</span> _));<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="insert"><a href="#insert" class="headerlink" title="insert"></a>insert</h2><p>插入一个新节点到侵入式链表的头部：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-comment">/// Inserts `entry` into the head of the list.</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// # Safety</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// You should guarantee that:</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// - `container` is not null</span><br>    <span class="hljs-comment">/// - `container` is immovable, e.g. inside an `Owned`</span><br>    <span class="hljs-comment">/// - the same `Entry` is not inserted more than once</span><br>    <span class="hljs-comment">/// - the inserted object will be removed before the list is dropped</span><br>    <span class="hljs-title function_ invoke__">pub</span>(<span class="hljs-keyword">crate</span>) <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">insert</span>&lt;<span class="hljs-symbol">&#x27;g</span>&gt;(&amp;<span class="hljs-symbol">&#x27;g</span> <span class="hljs-keyword">self</span>, container: Shared&lt;<span class="hljs-symbol">&#x27;g</span>, T&gt;, guard: &amp;<span class="hljs-symbol">&#x27;g</span> Guard) &#123;<br>        <span class="hljs-comment">// Insert right after head, i.e. at the beginning of the list.</span><br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">to</span> = &amp;<span class="hljs-keyword">self</span>.head;<br>        <span class="hljs-comment">// Get the intrusively stored Entry of the new element to insert.</span><br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">entry</span>: &amp;Entry = C::<span class="hljs-title function_ invoke__">entry_of</span>(container.<span class="hljs-title function_ invoke__">deref</span>());<br>        <span class="hljs-comment">// Make a Shared ptr to that Entry.</span><br>        <span class="hljs-keyword">let</span> <span class="hljs-variable">entry_ptr</span> = Shared::<span class="hljs-title function_ invoke__">from</span>(entry <span class="hljs-keyword">as</span> *<span class="hljs-keyword">const</span> _);<br>        <span class="hljs-comment">// Read the current successor of where we want to insert.</span><br>        <span class="hljs-keyword">let</span> <span class="hljs-keyword">mut </span><span class="hljs-variable">next</span> = to.<span class="hljs-title function_ invoke__">load</span>(Relaxed, guard);<br><br>        <span class="hljs-keyword">loop</span> &#123;<br>            <span class="hljs-comment">// Set the Entry of the to-be-inserted element to point to the previous successor of</span><br>            <span class="hljs-comment">// `to`.</span><br>            entry.next.<span class="hljs-title function_ invoke__">store</span>(next, Relaxed);<br>            <span class="hljs-keyword">match</span> to.<span class="hljs-title function_ invoke__">compare_exchange_weak</span>(next, entry_ptr, Release, Relaxed, guard) &#123;<br>                <span class="hljs-title function_ invoke__">Ok</span>(_) =&gt; <span class="hljs-keyword">break</span>,<br>                <span class="hljs-comment">// We lost the race or weak CAS failed spuriously. Update the successor and try</span><br>                <span class="hljs-comment">// again.</span><br>                <span class="hljs-title function_ invoke__">Err</span>(err) =&gt; next = err.current,<br>            &#125;<br>        &#125;<br>    &#125;<br></code></pre></td></tr></table></figure>
+
+<p>插入逻辑如下图所示：</p>
+<img src="/2023/01/28/epoch%EF%BC%88%E4%B8%89%EF%BC%89/list-4.png" srcset="/img/loading.gif" lazyload class="">
+
+
+<h2 id="delete"><a href="#delete" class="headerlink" title="delete"></a>delete</h2><p>删除节点：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">impl</span> <span class="hljs-title class_">Entry</span> &#123;<br>    <span class="hljs-comment">/// Marks this entry as deleted, deferring the actual deallocation to a later iteration.</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// # Safety</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// The entry should be a member of a linked list, and it should not have been deleted.</span><br>    <span class="hljs-comment">/// It should be safe to call `C::finalize` on the entry after the `guard` is dropped, where `C`</span><br>    <span class="hljs-comment">/// is the associated helper for the linked list.</span><br>    <span class="hljs-title function_ invoke__">pub</span>(<span class="hljs-keyword">crate</span>) <span class="hljs-keyword">unsafe</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">delete</span>(&amp;<span class="hljs-keyword">self</span>, guard: &amp;Guard) &#123;<br>        <span class="hljs-keyword">self</span>.next.<span class="hljs-title function_ invoke__">fetch_or</span>(<span class="hljs-number">1</span>, Release, guard);<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+<p>删除节点仅仅是把 <code>entry</code> 的 <code>next</code> 原子指针的 tag 设置为1，标记这个节点已经在逻辑上被删除了。之所以不立即把这个节点从链表中删除，是为了避免由于并发的插入&#x2F;删除节点导致插入成功的节点被丢失的问题。</p>
+<h2 id="traverse"><a href="#traverse" class="headerlink" title="traverse"></a>traverse</h2><p>首先创建迭代器：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-comment">/// Returns an iterator over all objects.</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// # Caveat</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// Every object that is inserted at the moment this function is called and persists at least</span><br>    <span class="hljs-comment">/// until the end of iteration will be returned. Since this iterator traverses a lock-free</span><br>    <span class="hljs-comment">/// linked list that may be concurrently modified, some additional caveats apply:</span><br>    <span class="hljs-comment">///</span><br>    <span class="hljs-comment">/// 1. If a new object is inserted during iteration, it may or may not be returned.</span><br>    <span class="hljs-comment">/// 2. If an object is deleted during iteration, it may or may not be returned.</span><br>    <span class="hljs-comment">/// 3. The iteration may be aborted when it lost in a race condition. In this case, the winning</span><br>    <span class="hljs-comment">///    thread will continue to iterate over the same list.</span><br>    <span class="hljs-title function_ invoke__">pub</span>(<span class="hljs-keyword">crate</span>) <span class="hljs-keyword">fn</span> <span class="hljs-title function_">iter</span>&lt;<span class="hljs-symbol">&#x27;g</span>&gt;(&amp;<span class="hljs-symbol">&#x27;g</span> <span class="hljs-keyword">self</span>, guard: &amp;<span class="hljs-symbol">&#x27;g</span> Guard) <span class="hljs-punctuation">-&gt;</span> Iter&lt;<span class="hljs-symbol">&#x27;g</span>, T, C&gt; &#123;<br>        Iter &#123;<br>            guard,<br>            pred: &amp;<span class="hljs-keyword">self</span>.head,<br>            curr: <span class="hljs-keyword">self</span>.head.<span class="hljs-title function_ invoke__">load</span>(Acquire, guard),<br>            head: &amp;<span class="hljs-keyword">self</span>.head,<br>            _marker: PhantomData,<br>        &#125;<br>    &#125;<br></code></pre></td></tr></table></figure>
+
+<p>遍历迭代器：</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><code class="hljs rust"><span class="hljs-keyword">impl</span>&lt;<span class="hljs-symbol">&#x27;g</span>, T: <span class="hljs-symbol">&#x27;g</span>, C: IsElement&lt;T&gt;&gt; <span class="hljs-built_in">Iterator</span> <span class="hljs-keyword">for</span> <span class="hljs-title class_">Iter</span>&lt;<span class="hljs-symbol">&#x27;g</span>, T, C&gt; &#123;<br>    <span class="hljs-keyword">type</span> <span class="hljs-title class_">Item</span> = <span class="hljs-type">Result</span>&lt;&amp;<span class="hljs-symbol">&#x27;g</span> T, IterError&gt;;<br><br>    <span class="hljs-keyword">fn</span> <span class="hljs-title function_">next</span>(&amp;<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>) <span class="hljs-punctuation">-&gt;</span> <span class="hljs-type">Option</span>&lt;<span class="hljs-keyword">Self</span>::Item&gt; &#123;<br>        <span class="hljs-keyword">while</span> <span class="hljs-keyword">let</span> <span class="hljs-variable">Some</span>(c) = <span class="hljs-keyword">unsafe</span> &#123; <span class="hljs-keyword">self</span>.curr.<span class="hljs-title function_ invoke__">as_ref</span>() &#125; &#123;<br>            <span class="hljs-keyword">let</span> <span class="hljs-variable">succ</span> = c.next.<span class="hljs-title function_ invoke__">load</span>(Acquire, <span class="hljs-keyword">self</span>.guard);<br><br>            <span class="hljs-keyword">if</span> succ.<span class="hljs-title function_ invoke__">tag</span>() == <span class="hljs-number">1</span> &#123;<br>                <span class="hljs-comment">// This entry was removed. Try unlinking it from the list.</span><br>                <span class="hljs-keyword">let</span> <span class="hljs-variable">succ</span> = succ.<span class="hljs-title function_ invoke__">with_tag</span>(<span class="hljs-number">0</span>);<br><br>                <span class="hljs-comment">// The tag should always be zero, because removing a node after a logically deleted</span><br>                <span class="hljs-comment">// node leaves the list in an invalid state.</span><br>                <span class="hljs-built_in">debug_assert!</span>(<span class="hljs-keyword">self</span>.curr.<span class="hljs-title function_ invoke__">tag</span>() == <span class="hljs-number">0</span>);<br><br>                <span class="hljs-comment">// Try to unlink `curr` from the list, and get the new value of `self.pred`.</span><br>                <span class="hljs-keyword">let</span> <span class="hljs-variable">succ</span> = <span class="hljs-keyword">match</span> <span class="hljs-keyword">self</span><br>                    .pred<br>                    .<span class="hljs-title function_ invoke__">compare_exchange</span>(<span class="hljs-keyword">self</span>.curr, succ, Acquire, Acquire, <span class="hljs-keyword">self</span>.guard)<br>                &#123;<br>                    <span class="hljs-title function_ invoke__">Ok</span>(_) =&gt; &#123;<br>                        <span class="hljs-comment">// We succeeded in unlinking `curr`, so we have to schedule</span><br>                        <span class="hljs-comment">// deallocation. Deferred drop is okay, because `list.delete()` can only be</span><br>                        <span class="hljs-comment">// called if `T: &#x27;static`.</span><br>                        <span class="hljs-keyword">unsafe</span> &#123;<br>                            C::<span class="hljs-title function_ invoke__">finalize</span>(<span class="hljs-keyword">self</span>.curr.<span class="hljs-title function_ invoke__">deref</span>(), <span class="hljs-keyword">self</span>.guard);<br>                        &#125;<br><br>                        <span class="hljs-comment">// `succ` is the new value of `self.pred`.</span><br>                        succ<br>                    &#125;<br>                    <span class="hljs-title function_ invoke__">Err</span>(e) =&gt; &#123;<br>                        <span class="hljs-comment">// `e.current` is the current value of `self.pred`.</span><br>                        e.current<br>                    &#125;<br>                &#125;;<br><br>                <span class="hljs-comment">// If the predecessor node is already marked as deleted, we need to restart from</span><br>                <span class="hljs-comment">// `head`.</span><br>                <span class="hljs-keyword">if</span> succ.<span class="hljs-title function_ invoke__">tag</span>() != <span class="hljs-number">0</span> &#123;<br>                    <span class="hljs-keyword">self</span>.pred = <span class="hljs-keyword">self</span>.head;<br>                    <span class="hljs-keyword">self</span>.curr = <span class="hljs-keyword">self</span>.head.<span class="hljs-title function_ invoke__">load</span>(Acquire, <span class="hljs-keyword">self</span>.guard);<br><br>                    <span class="hljs-keyword">return</span> <span class="hljs-title function_ invoke__">Some</span>(<span class="hljs-title function_ invoke__">Err</span>(IterError::Stalled));<br>                &#125;<br><br>                <span class="hljs-comment">// Move over the removed by only advancing `curr`, not `pred`.</span><br>                <span class="hljs-keyword">self</span>.curr = succ;<br>                <span class="hljs-keyword">continue</span>;<br>            &#125;<br><br>            <span class="hljs-comment">// Move one step forward.</span><br>            <span class="hljs-keyword">self</span>.pred = &amp;c.next;<br>            <span class="hljs-keyword">self</span>.curr = succ;<br><br>            <span class="hljs-keyword">return</span> <span class="hljs-title function_ invoke__">Some</span>(<span class="hljs-title function_ invoke__">Ok</span>(<span class="hljs-keyword">unsafe</span> &#123; C::<span class="hljs-title function_ invoke__">element_of</span>(c) &#125;));<br>        &#125;<br><br>        <span class="hljs-comment">// We reached the end of the list.</span><br>        <span class="hljs-literal">None</span><br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>值得注意的是，逻辑上被删除的节点需要在遍历的过程中进行真正删除，删除逻辑如下图所示：</p>
+<img src="/2023/01/28/epoch%EF%BC%88%E4%B8%89%EF%BC%89/list-5.png" srcset="/img/loading.gif" lazyload class="">
+              
+            </div>
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/gc/" class="category-chain-item">gc</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/rust/">#rust</a>
+      
+        <a href="/tags/note/">#note</a>
+      
+        <a href="/tags/gc/">#gc</a>
+      
+        <a href="/tags/lock-free/">#lock-free</a>
+      
+        <a href="/tags/concurrent/">#concurrent</a>
+      
+        <a href="/tags/relaxed-memory/">#relaxed memory</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>crossbeam-epoch（三）：侵入式无锁链表</div>
+      <div>https://night-cruise.github.io/2023/01/28/epoch（三）/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Night Cruise</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2023年1月28日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/01/27/epoch%EF%BC%88%E4%BA%8C%EF%BC%89%EF%BC%9AAtomic/" title="crossbeam-epoch（二）：Atomic">
+                        <span class="hidden-mobile">crossbeam-epoch（二）：Atomic</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.0/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
